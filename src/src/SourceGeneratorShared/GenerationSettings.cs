@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace Purview.SourceGeneratorFramework;
@@ -171,7 +172,10 @@ public sealed record GenerationSettings
 		TypeDeclarationAccessibility.Public;
 
 	/// <summary>
-	/// Creates a new generation settings instance for the specified generator type, using the type name and assembly version.
+	/// Creates a new generation settings instance for the specified generator type, using the type name and
+	/// the assembly's informational version. The informational version carries the full SemVer details,
+	/// including any pre-release suffix (such as <c>-alpha</c>) and build metadata (such as <c>+hash</c>),
+	/// which are not present in the numeric assembly version.
 	/// </summary>
 	/// <typeparam name="TGenerator">The type of the generator.</typeparam>
 	/// <param name="disabledSourceGenMSBuildProperty">An optional MSBuild property name that disables the generator when set to true.</param>
@@ -180,10 +184,15 @@ public sealed record GenerationSettings
 	{
 		var generatorType = typeof(TGenerator);
 
-		return new(
-			generatorType.Name,
-			generatorType.Assembly.GetName().Version?.ToString(),
-			disabledSourceGenMSBuildProperty
-		);
+		return new(generatorType.Name, GetGeneratorVersion(generatorType.Assembly), disabledSourceGenMSBuildProperty);
 	}
+
+	/// <summary>
+	/// Gets the full version for an assembly, preferring the informational version (which includes any
+	/// pre-release suffix and build metadata) and falling back to the numeric assembly version.
+	/// </summary>
+	static string GetGeneratorVersion(Assembly assembly) =>
+		assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+		?? assembly.GetName().Version?.ToString()
+		?? "1.0.0.0";
 }

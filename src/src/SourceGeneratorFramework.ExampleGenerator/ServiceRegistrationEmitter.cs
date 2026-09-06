@@ -162,7 +162,12 @@ static class ServiceRegistrationEmitter
 								"Name",
 								TypeIdentity.Create<string>().AsTypeReference(),
 								TypeDeclarationAccessibility.Public,
-								options => options with { IsStatic = true, ExpressionBody = $"\"{target.Name}\"" }
+								options =>
+									options with
+									{
+										IsStatic = true,
+										ExpressionBody = target.Name.StringLiteral(),
+									}
 							);
 
 							inner.Property(
@@ -173,7 +178,7 @@ static class ServiceRegistrationEmitter
 									options with
 									{
 										IsStatic = true,
-										ExpressionBody = $"\"{target.LifetimeMemberName}\"",
+										ExpressionBody = target.LifetimeMemberName.StringLiteral(),
 									}
 							);
 

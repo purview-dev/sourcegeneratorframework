@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace System;
 
@@ -14,6 +15,15 @@ public static class StringExtension
 		/// <param name="surroundWith">The string to surround the value with.</param>
 		/// <returns>The surrounded string.</returns>
 		public string Surround(string surroundWith = "\"") => $"{surroundWith}{value}{surroundWith}";
+
+		/// <summary>
+		/// Returns a quoted, escaped C# string literal for the value so it can be safely emitted into
+		/// generated source. Backslashes, quotes, and other characters requiring escaping are escaped;
+		/// e.g. <c>^[\w\-.]+$</c> becomes <c>"^[\\w\\-.]+$"</c>. A null value is emitted as the
+		/// <c>null</c> keyword.
+		/// </summary>
+		/// <returns>The value as a C# string literal, or the <c>null</c> keyword if the value is null.</returns>
+		public string StringLiteral() => value is null ? "null" : SymbolDisplay.FormatLiteral(value, true);
 
 		/// <summary>
 		/// Returns the string value or "null" if the value is null. If <paramref name="useWhitespaceCheck"/> is true, then it will also return "null" if the value is whitespace.

@@ -108,6 +108,16 @@ writer.MethodCall("Create", ["x"], receiver: "factory", genericArguments: [TypeR
 // factory.Create<string>(x);
 ```
 
+When a statement or declaration must embed a runtime or user-supplied string — for example a
+regular-expression pattern or error message — emit it through the `StringLiteral()` extension rather
+than wrapping it in quotes by hand. It returns a quoted, escaped C# string literal:
+
+```csharp
+body.Field("regex", regexType, TypeDeclarationAccessibility.Private,
+    options => options with { IsStatic = true, Initializer = $"new({pattern.StringLiteral()})" });
+// pattern = ^[\w\-.]+$  =>  new("^[\\w\\-.]+$")
+```
+
 A **chained** invocation — where the result of each call is the receiver of the next, and a postfix is
 applied to the final result — is expressed with `MethodCallChain`/`AwaitedMethodCallChain`. The chain
 is written as an expression (no terminating semicolon), so it composes as the value of an
@@ -278,6 +288,12 @@ Emits:
 
 namespace Purview.Telemetry;
 ```
+
+The generator version in the header and the `GeneratedCode` attribute comes from the
+`GenerationSettings` used to create the writer. When settings are created via
+`GenerationSettings.Create<TGenerator>()`, the full assembly informational version is used, so any
+pre-release suffix (such as `-alpha`) and build metadata (such as `+commit-hash`) are preserved rather
+than being reduced to the numeric assembly version.
 
 ### Conditional compilation returns
 
