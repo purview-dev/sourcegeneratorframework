@@ -188,10 +188,43 @@ public static class IncrementalPipeline
 			)
 			.WithTrackingName("GetGenerationConfiguration");
 
-	static LanguageVersion? TryParseLanguageVersion(string? value) =>
-		string.IsNullOrWhiteSpace(value) || !Enum.TryParse(value, ignoreCase: true, out LanguageVersion parsed)
-			? null
-			: parsed;
+	/// <summary>
+	/// Parses an MSBuild <c>LangVersion</c> value into a <see cref="LanguageVersion"/>, handling the
+	/// numeric forms (<c>14</c>/<c>14.0</c> → <see cref="LanguageVersion.CSharp14"/>) and the
+	/// <c>latest</c>/<c>latestMajor</c>/<c>preview</c> keywords in addition to named enum values.
+	/// </summary>
+	internal static LanguageVersion? TryParseLanguageVersion(string? value)
+	{
+		if (string.IsNullOrWhiteSpace(value))
+			return null;
+
+		// The netstandard2.0 reference surface does not surface the [NotNullWhen(false)] annotation,
+		// so the guard does not narrow the nullable annotation.
+		var trimmed = value!.Trim();
+
+		if (
+			trimmed.Equals("latest", StringComparison.OrdinalIgnoreCase)
+			|| trimmed.Equals("latestMajor", StringComparison.OrdinalIgnoreCase)
+		)
+			return LanguageVersion.LatestMajor;
+
+		if (trimmed.Equals("preview", StringComparison.OrdinalIgnoreCase))
+			return LanguageVersion.Preview;
+
+		// The MSBuild LangVersion property is commonly numeric ("14", "13.0"). Enum.TryParse binds a
+		// numeric string to the integer value cast to the enum — "14" becomes the undefined
+		// (LanguageVersion)14 rather than LanguageVersion.CSharp14 (1400) — so numeric forms are
+		// mapped explicitly before named parsing.
+		var numericText = trimmed;
+		if (numericText.EndsWith(".0", StringComparison.Ordinal))
+			numericText = numericText.Substring(0, numericText.Length - 2);
+
+		if (int.TryParse(numericText, out var major))
+			return (LanguageVersion)(major * 100);
+
+		// Finally, try to parse the value as a named enum value.
+		return Enum.TryParse(trimmed, ignoreCase: true, out LanguageVersion parsed) ? parsed : null;
+	}
 
 	/// <summary>
 	/// Creates a values provider for syntax nodes annotated with a specific attribute.

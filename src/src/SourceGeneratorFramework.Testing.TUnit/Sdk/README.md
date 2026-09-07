@@ -83,11 +83,11 @@ the normal reference allows the test class to derive from
 reference.
 
 For multi-target TUnit projects, the normal reference means the generator's Roslyn dependencies
-participate in reference resolution for every target. Build the generator against the oldest
-compatible Roslyn version (Roslyn 4.13 for a .NET 8–10 test matrix) and avoid forcing a newer
-`System.Collections.Immutable` version through central package management. The framework's
-`RegisterEmbeddedAttribute` helper can be used instead of Roslyn 4.14's
-`AddEmbeddedAttributeDefinition` API when .NET 8 compatibility is required.
+participate in reference resolution for every target. Build the generator against the Roslyn version
+that supports its API usage; this framework is built against Roslyn 5.0, which ships `net8.0` and
+`net9.0` package assets, so a .NET 8–10 test matrix still loads it. Compiler hosts that consume the
+generator as an analyzer must be Roslyn 5.0 or later (`.NET 10` SDK / Visual Studio 2026). Do not
+force a newer `System.Collections.Immutable` version through central package management.
 
 ## Which base class and method
 

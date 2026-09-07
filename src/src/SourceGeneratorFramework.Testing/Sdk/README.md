@@ -88,11 +88,12 @@ separate from the in-memory compilation created by `SourceGeneratorTestRunner`; 
 the runner is still compiled and generated independently.
 
 The normal reference also exposes the generator's assembly dependencies to every target framework
-of the test project. Keep the generator on the oldest compatible Roslyn version—for example,
-Roslyn 4.13 when tests target .NET 8, .NET 9, and .NET 10. A generator built against Roslyn 5 and
-`System.Collections.Immutable` 10 will conflict with the framework assemblies supplied by .NET 8
-and .NET 9. Use the framework's `RegisterEmbeddedAttribute` helper when avoiding a newer Roslyn API
-such as `AddEmbeddedAttributeDefinition`.
+of the test project. This framework is built against Roslyn 5.0, which ships `net8.0` and `net9.0`
+package assets, so tests targeting .NET 8, .NET 9, and .NET 10 can all load the test runner. The
+Roslyn version used to compile a generator establishes the minimum compiler-host requirement for
+projects that consume it as an analyzer — Roslyn 5.0 means `.NET 10` SDK / Visual Studio 2026 or
+later. Do not centrally pin `System.Collections.Immutable` to a newer runtime version merely to make
+the generator load.
 
 ## Options
 
@@ -145,14 +146,21 @@ fixAllResult.FixedCode()    // CodeFixFixAllResult / RefactorTestResult: changed
 ```
 
 `CodeQuery` provides a `Get`/`Has`/`TryGet` family for declarations and members, generic `Get<T>`/`Has<T>`,
-syntax-tree lookup, and type-aware matching against `TypeReference`:
+syntax-tree lookup, and type-aware matching against `TypeReference`. Every `Get` returns a
+`CodeQueryResult<T>` — the matched node (`Node`) plus a query scoped to it (`Query`) — with implicit
+conversions to both the node and the scoped query, so member queries chain without re-passing the query:
 
 ```csharp
 var query = result.Generated();
-query.GetClass("ServiceCollectionExtensions").HasMethod(query, "Add", TypeReference.Create<int>());
-query.HasProperty("Count", TypeReference.Create<int>());
-query.GetMethod("DoWork").HasParameters(query, intType, nullableInt, complexType);
+query.GetClass("ServiceCollectionExtensions").HasMethod("Add", TypeReference.Create<int>());
+query.GetClass("Service").GetProperty("Count", TypeReference.Create<int>());   // property + type
+query.GetClass("Service").GetMethod("DoWork").HasParameters(intType, nullableInt, complexType);
 query.GetClass("Widget", "Example.Models");   // namespace-scoped lookup
+query.HasClass(new TypeReference(new TypeIdentity("Widget", "Example.Models")));  // type-identity lookup
+query.GetClass(TypeIdentity.Create<Widget>()); // a TypeIdentity is implicitly castable to TypeReference
+
+ClassDeclarationSyntax cls = query.GetClass("Service");   // implicit conversion to the node
+query.GetClass("Service").Node.Members;                    // or use .Node for direct syntax access
 ```
 
 `Get` throws `SyntaxNotFoundException` when nothing matches; `Has` returns `bool`. See the

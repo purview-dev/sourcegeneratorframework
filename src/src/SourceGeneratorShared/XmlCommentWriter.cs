@@ -356,9 +356,15 @@ public static class XmlCommentWriter
 			}
 
 			endTag ??= startTag;
-			if (compactSingleLine && content.Length == 1 && insideStart is null && insideEnd is null)
+			if (
+				compactSingleLine
+				&& startTag is not null
+				&& content.Length == 1
+				&& insideStart is null
+				&& insideEnd is null
+			)
 			{
-				var renderedStartTag = startTag!.StartsWith("<", StringComparison.Ordinal) ? startTag : $"<{startTag}>";
+				var renderedStartTag = startTag.StartsWith("<", StringComparison.Ordinal) ? startTag : $"<{startTag}>";
 				return writer
 					.Write("/// ")
 					.Write(renderedStartTag)
@@ -411,7 +417,7 @@ public static class XmlCommentWriter
 		/// <returns>The constructed XML tag.</returns>
 		/// <exception cref="ArgumentException">If the <paramref name="tag"/> is <see langword="null"/> or an empty string.	</exception>
 		/// <example>
-		/// <c>var seeTag = BuildXmlTag("see", ("cref", TypeLibrary.System.DateTimeOffset));</c>
+		/// <c>var seeTag = BuildXmlTag("see", ("cref", PurviewTypeLibrary.System.DateTimeOffset));</c>
 		/// Would produce: <c>&lt;see cref="System.DateTimeOffset" /&gt;</c>
 		/// </example>
 		public static string BuildXmlTag(string tag, params (string Name, object Value)[]? attributes)

@@ -6,6 +6,8 @@ static class GeneratorTypeLibrary
 
 	public static readonly TypeIdentity TypeValueObject = TypeIdentity.Create<TypeIdentity>();
 
+	public static readonly TypeIdentity TypeReferenceValueObject = TypeIdentity.Create<TypeReference>();
+
 	public static class Attirbutes
 	{
 		public static readonly TypeIdentity GenerateAttribute = new(nameof(GenerateAttribute), GeneratorsNamespace);
@@ -25,6 +27,13 @@ static class GeneratorTypeLibrary
 			nameof(GenericTypeArgumentAttribute),
 			GeneratorsNamespace
 		);
+
+		public static readonly TypeIdentity GenerateTypeLibraryAttribute = new(
+			nameof(GenerateTypeLibraryAttribute),
+			GeneratorsNamespace
+		);
+
+		public static readonly TypeIdentity TypeRefAttribute = new(nameof(TypeRefAttribute), GeneratorsNamespace);
 	}
 
 	public static class System

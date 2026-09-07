@@ -41,10 +41,10 @@ public class MemberQueryTests
 		var query = CreateQuery();
 		var cls = query.GetClass("Sample");
 
-		await Assert.That(cls.HasMethod(query, "DoWork", IntType, NullableIntType, ComplexType)).IsTrue();
-		await Assert.That(cls.HasMethod(query, "DoWork", IntType, IntType)).IsFalse();
-		await Assert.That(cls.HasMethod(query, "Missing")).IsFalse();
-		await Assert.That(cls.GetMethod(query, "Compute").HasParameters(query, IntType, IntType)).IsTrue();
+		await Assert.That(cls.HasMethod("DoWork", IntType, NullableIntType, ComplexType)).IsTrue();
+		await Assert.That(cls.HasMethod("DoWork", IntType, IntType)).IsFalse();
+		await Assert.That(cls.HasMethod("Missing")).IsFalse();
+		await Assert.That(cls.GetMethod("Compute").HasParameters(IntType, IntType)).IsTrue();
 	}
 
 	[Test]
@@ -53,9 +53,9 @@ public class MemberQueryTests
 		var query = CreateQuery();
 		var cls = query.GetClass("Sample");
 
-		await Assert.That(cls.HasMethodReturnType(query, "Compute", IntType)).IsTrue();
-		await Assert.That(cls.HasMethodReturnType(query, "Compute", StringType)).IsFalse();
-		await Assert.That(cls.GetMethod(query, "Compute").HasReturnType(query, IntType)).IsTrue();
+		await Assert.That(cls.HasMethodReturnType("Compute", IntType)).IsTrue();
+		await Assert.That(cls.HasMethodReturnType("Compute", StringType)).IsFalse();
+		await Assert.That(cls.GetMethod("Compute").HasReturnType(IntType)).IsTrue();
 	}
 
 	[Test]
@@ -64,10 +64,10 @@ public class MemberQueryTests
 		var query = CreateQuery();
 		var cls = query.GetClass("Sample");
 
-		await Assert.That(cls.HasProperty(query, "Count")).IsTrue();
-		await Assert.That(cls.HasProperty(query, "Count", IntType)).IsTrue();
-		await Assert.That(cls.HasProperty(query, "Count", StringType)).IsFalse();
-		await Assert.That(cls.GetProperty(query, "Name").HasType(query, StringType)).IsTrue();
+		await Assert.That(cls.HasProperty("Count")).IsTrue();
+		await Assert.That(cls.HasProperty("Count", IntType)).IsTrue();
+		await Assert.That(cls.HasProperty("Count", StringType)).IsFalse();
+		await Assert.That(cls.GetProperty("Name").HasType(StringType)).IsTrue();
 	}
 
 	[Test]
@@ -76,11 +76,11 @@ public class MemberQueryTests
 		var query = CreateQuery();
 		var cls = query.GetClass("Sample");
 
-		await Assert.That(cls.HasIndexer(query)).IsTrue();
-		await Assert.That(cls.HasIndexer(query, StringType)).IsTrue();
-		await Assert.That(cls.HasIndexer(query, StringType, IntType)).IsTrue();
-		await Assert.That(cls.HasIndexer(query, IntType, IntType)).IsFalse();
-		await Assert.That(cls.GetIndexer(query).HasType(query, StringType)).IsTrue();
+		await Assert.That(cls.HasIndexer()).IsTrue();
+		await Assert.That(cls.HasIndexer(StringType)).IsTrue();
+		await Assert.That(cls.HasIndexer(StringType, IntType)).IsTrue();
+		await Assert.That(cls.HasIndexer(IntType, IntType)).IsFalse();
+		await Assert.That(cls.GetIndexer().HasType(StringType)).IsTrue();
 	}
 
 	[Test]
@@ -89,10 +89,10 @@ public class MemberQueryTests
 		var query = CreateQuery();
 		var cls = query.GetClass("Sample");
 
-		await Assert.That(cls.HasConstructor(query)).IsTrue();
-		await Assert.That(cls.HasConstructor(query, IntType)).IsTrue();
-		await Assert.That(cls.HasConstructor(query, StringType)).IsFalse();
-		await Assert.That(cls.GetConstructor(query, IntType).ParameterList.Parameters.Count).IsEqualTo(1);
+		await Assert.That(cls.HasConstructor()).IsTrue();
+		await Assert.That(cls.HasConstructor(IntType)).IsTrue();
+		await Assert.That(cls.HasConstructor(StringType)).IsFalse();
+		await Assert.That(cls.GetConstructor(IntType).Node.ParameterList.Parameters.Count).IsEqualTo(1);
 	}
 
 	[Test]

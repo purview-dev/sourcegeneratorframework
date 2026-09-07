@@ -61,14 +61,18 @@ public class ServiceRegistrationGeneratorTests
 
 		var query = result.Generated();
 		var method = query.GetMethod("AddExampleServices");
-		var @class = query.GetClass("ServiceCollectionExtensions");
+		var @class = query.GetClass(
+			new TypeReference(
+				new TypeIdentity("ServiceCollectionExtensions", "Purview.SourceGeneratorFramework.Examples")
+			)
+		);
 
-		await Assert.That(@class.Identifier.ValueText).IsEqualTo("ServiceCollectionExtensions");
-		await Assert.That(@class.Modifiers.Any(static m => m.IsKind(SyntaxKind.StaticKeyword))).IsTrue();
-		await Assert.That(method.Identifier.ValueText).IsEqualTo("AddExampleServices");
-		await Assert.That(method.HasParameters(query, IServiceCollection)).IsTrue();
+		await Assert.That(@class.Node.Identifier.ValueText).IsEqualTo("ServiceCollectionExtensions");
+		await Assert.That(@class.Node.Modifiers.Any(static m => m.IsKind(SyntaxKind.StaticKeyword))).IsTrue();
+		await Assert.That(method.Node.Identifier.ValueText).IsEqualTo("AddExampleServices");
+		await Assert.That(method.HasParameters(IServiceCollection)).IsTrue();
 
-		var methodText = method.ToString();
+		var methodText = method.Node.ToString();
 		var compact = methodText
 			.Replace("\r", "", StringComparison.Ordinal)
 			.Replace("\n", "", StringComparison.Ordinal)
@@ -170,10 +174,10 @@ public class ServiceRegistrationGeneratorTests
 		// Post-initialization outputs have no compilation context, so the unknown nullable state falls back to
 		// keeping the annotation and emitting the #nullable enable directive.
 		var attribute = result.Generated().GetClass("GenerateServiceAttribute");
-		await Assert.That(attribute.AttributeLists).IsNotEmpty();
+		await Assert.That(attribute.Node.AttributeLists).IsNotEmpty();
 
 		var nameProperty = result.Generated().GetProperty("Name");
-		await Assert.That(nameProperty.Type.ToString()).IsEqualTo("string?");
+		await Assert.That(nameProperty.Node.Type.ToString()).IsEqualTo("string?");
 	}
 
 	[Test]
@@ -227,12 +231,14 @@ public class ServiceRegistrationGeneratorTests
 		var serviceInfoTree = query.GetSyntaxTree("ServiceInfo.g.cs");
 		var serviceInfoQuery = new CodeQuery([serviceInfoTree], result.CompilationResult.Compilation);
 
-		await Assert.That(query.GetClass("ServiceInfo").Identifier.ValueText).IsEqualTo("ServiceInfo");
-		await Assert.That(serviceInfoQuery.GetClass("MyService").Identifier.ValueText).IsEqualTo("MyService");
-		await Assert.That(serviceInfoQuery.GetProperty("Name").ExpressionBody!.ToString()).Contains("MyService");
-		await Assert.That(serviceInfoQuery.GetProperty("Lifetime").ExpressionBody!.ToString()).Contains("Transient");
+		await Assert.That(query.GetClass("ServiceInfo").Node.Identifier.ValueText).IsEqualTo("ServiceInfo");
+		await Assert.That(serviceInfoQuery.GetClass("MyService").Node.Identifier.ValueText).IsEqualTo("MyService");
+		await Assert.That(serviceInfoQuery.GetProperty("Name").Node.ExpressionBody!.ToString()).Contains("MyService");
 		await Assert
-			.That(serviceInfoQuery.GetProperty("Type").ExpressionBody!.ToString())
+			.That(serviceInfoQuery.GetProperty("Lifetime").Node.ExpressionBody!.ToString())
+			.Contains("Transient");
+		await Assert
+			.That(serviceInfoQuery.GetProperty("Type").Node.ExpressionBody!.ToString())
 			.Contains("typeof(global::Test.MyService)");
 	}
 
@@ -252,9 +258,9 @@ public class ServiceRegistrationGeneratorTests
 		var attribute = query.GetClass("GenerateServiceAttribute");
 		var lifetime = query.GetEnum("ServiceLifetime");
 
-		await Assert.That(attribute.BaseList!.ToString()).Contains("global::System.Attribute");
-		await Assert.That(lifetime.Members.Count).IsEqualTo(3);
-		await Assert.That(query.GetProperty("Lifetime").Type.ToString()).Contains("ServiceLifetime");
+		await Assert.That(attribute.Node.BaseList!.ToString()).Contains("global::System.Attribute");
+		await Assert.That(lifetime.Node.Members.Count).IsEqualTo(3);
+		await Assert.That(query.GetProperty("Lifetime").Node.Type.ToString()).Contains("ServiceLifetime");
 	}
 
 	[Test]
@@ -270,19 +276,19 @@ public class ServiceRegistrationGeneratorTests
 		var result = await GenerateAsync(source, cancellationToken);
 
 		var method = await Assert.That(result).HasGeneratedMethod("AddExampleServices");
-		await Assert.That(method.Identifier.ValueText).IsEqualTo("AddExampleServices");
+		await Assert.That(method.Node.Identifier.ValueText).IsEqualTo("AddExampleServices");
 
 		var @class = await Assert.That(result).HasGeneratedClass("ServiceCollectionExtensions");
-		await Assert.That(@class.Identifier.ValueText).IsEqualTo("ServiceCollectionExtensions");
+		await Assert.That(@class.Node.Identifier.ValueText).IsEqualTo("ServiceCollectionExtensions");
 
 		var attribute = await Assert.That(result).HasGeneratedClass("GenerateServiceAttribute");
-		await Assert.That(attribute.BaseList!.ToString()).Contains("global::System.Attribute");
+		await Assert.That(attribute.Node.BaseList!.ToString()).Contains("global::System.Attribute");
 
 		var nameProperty = await Assert.That(result).HasGeneratedProperty("Name");
-		await Assert.That(nameProperty.Identifier.ValueText).IsEqualTo("Name");
+		await Assert.That(nameProperty.Node.Identifier.ValueText).IsEqualTo("Name");
 
 		var lifetime = await Assert.That(result).HasGeneratedMethod("AddExampleServices", [IServiceCollection]);
-		await Assert.That(lifetime.ParameterList.Parameters.Count).IsEqualTo(1);
+		await Assert.That(lifetime.Node.ParameterList.Parameters.Count).IsEqualTo(1);
 
 		await Assert.That(result).HasGeneratedSyntaxTree("ServiceCollectionExtensions.g.cs");
 	}

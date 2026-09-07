@@ -57,17 +57,14 @@ static class RoslynComponentDiscovery
 		return false;
 	}
 
-	public static bool HasAttribute(INamedTypeSymbol type, INamedTypeSymbol? attributeType)
-	{
-		if (attributeType is null)
-			return false;
-
-		return type.GetAttributes()
-			.Any(a =>
-				a.AttributeClass is not null
-				&& SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, attributeType)
-			);
-	}
+	public static bool HasAttribute(INamedTypeSymbol type, INamedTypeSymbol? attributeType) =>
+		attributeType is null
+			? false
+			: type.GetAttributes()
+				.Any(a =>
+					a.AttributeClass is not null
+					&& SymbolEqualityComparer.Default.Equals(a.AttributeClass.OriginalDefinition, attributeType)
+				);
 
 	/// <summary>
 	/// True when the type must be instantiated by the Roslyn compiler host: it derives from a
@@ -93,6 +90,7 @@ static class RoslynComponentDiscovery
 		if (IsSourceGenerator(type, incrementalGeneratorType, legacyGeneratorType))
 			return true;
 
+		// Some Roslyn components are not derived from a base type or interface, but are instead marked with an attribute.
 		return HasAttribute(type, exportCodeFixProviderAttributeType)
 			|| HasAttribute(type, diagnosticAnalyzerAttributeType)
 			|| HasAttribute(type, generatorAttributeType);
@@ -106,6 +104,7 @@ static class RoslynComponentDiscovery
 		if (type.ContainingType is not null)
 			return IsEffectivelyPublic(type.ContainingType);
 
+		// The type is public and not nested, so it is effectively public.
 		return true;
 	}
 
@@ -127,8 +126,11 @@ static class RoslynComponentDiscovery
 			IsSourceGenerator(type, incrementalGeneratorType, legacyGeneratorType)
 			|| HasAttribute(type, generatorAttributeType)
 		)
+		{
 			return "source generator";
+		}
 
+		// The type is not a known Roslyn component, but it is still a public type in a generator assembly, so it is effectively a Roslyn component.
 		return "Roslyn component";
 	}
 }

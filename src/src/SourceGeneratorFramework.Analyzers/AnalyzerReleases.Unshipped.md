@@ -30,3 +30,11 @@ ADM0007 | AutoDiscovery | Error | Auto-discovery requires a target attribute typ
 ADM0008 | TypeArgument | Error | Type argument property type must be TypeIdentity
 ADM0009 | Property | Error | IsEnum property must be a string type
 ADM0010 | Property | Error | Attribute data model property type is not cacheable |
+TLB0001 | TypeLibrary | Error | GenerateTypeLibrary can only be applied to a static class
+TLB0002 | TypeLibrary | Error | Type library member type must be TypeIdentity
+TLB0003 | TypeLibrary | Error | Type library member requires a resolvable type and namespace
+TLB0004 | TypeLibrary | Error | Duplicate type library member
+TLB0005 | TypeLibrary | Error | Generated type library class name is not a valid identifier
+TLB0006 | TypeLibrary | Error | Generated type library namespace is not valid
+TLB0008 | TypeLibrary | Error | Type library member accessibility is invalid
+TLB0009 | TypeLibrary | Error | Type library reference member requires an initializer

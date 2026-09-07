@@ -67,13 +67,16 @@ All assertion extensions live under `Purview.SourceGeneratorFramework.Testing.TU
 (globally imported by the package's props). `Assert.That(...)` calls are terminal and **return the value**
 when awaited.
 
-- **`CodeQueryAssertions`** — return syntax nodes: `HasGeneratedMethod` (optionally with
-  `TypeReference[]` parameter types), `HasGeneratedMethodReturnType`, `HasGeneratedClass`,
+- **`CodeQueryAssertions`** — return `CodeQueryResult<T>` (the matched node via `.Node`, plus a query
+  scoped to it via `.Query`): `HasGeneratedMethod` (optionally with `TypeReference[]` parameter types),
+  `HasGeneratedMethodReturnType`, `HasGeneratedClass` (by name or `TypeReference`/`TypeIdentity` identity),
   `HasGeneratedProperty`, `HasGeneratedField`, `HasGeneratedSyntaxTree`; `HasFixedMethod` for code-fix and
   refactor results.
   ```csharp
-  MethodDeclarationSyntax method = await Assert.That(result).HasGeneratedMethod("DoWork", [intType, nullableInt]);
-  ClassDeclarationSyntax cls = await Assert.That(result).HasGeneratedClass("Service");
+  CodeQueryResult<MethodDeclarationSyntax> method = await Assert.That(result).HasGeneratedMethod("DoWork", [intType, nullableInt]);
+  CodeQueryResult<ClassDeclarationSyntax> cls = await Assert.That(result).HasGeneratedClass("Service");
+  await Assert.That(cls.HasProperty("Count", intType)).IsTrue();           // chained member query
+  await Assert.That(cls.Node.Identifier.ValueText).IsEqualTo("Service");   // direct syntax access
   ```
 - **`DiagnosticAssertions`** — `HasDiagnostic(descriptor|id)`, `HasDiagnostics(count)`,
   `DoesNotHaveDiagnostic`, `HasNoDiagnostics`, `HasNoErrorDiagnostics` on generator/analyzer/code-fix results.

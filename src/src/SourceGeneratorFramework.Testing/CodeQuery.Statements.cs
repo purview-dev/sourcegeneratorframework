@@ -12,7 +12,7 @@ public sealed partial class CodeQuery
 	/// Gets the first <c>foreach</c> statement, optionally matching its iterator text.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No statement matched.</exception>
-	public ForEachStatementSyntax GetForeach(string? iterator = null) =>
+	public CodeQueryResult<ForEachStatementSyntax> GetForeach(string? iterator = null) =>
 		Get<ForEachStatementSyntax>(statement => iterator is null || statement.Expression.ToString() == iterator);
 
 	/// <summary>
@@ -25,7 +25,7 @@ public sealed partial class CodeQuery
 	/// Gets the first <c>for</c> statement.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No statement matched.</exception>
-	public ForStatementSyntax GetFor() => Get<ForStatementSyntax>();
+	public CodeQueryResult<ForStatementSyntax> GetFor() => Get<ForStatementSyntax>();
 
 	/// <summary>
 	/// Determines whether a <c>for</c> statement exists.
@@ -36,7 +36,7 @@ public sealed partial class CodeQuery
 	/// Gets the first <c>while</c> statement, optionally matching its condition.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No statement matched.</exception>
-	public WhileStatementSyntax GetWhile(string? condition = null) =>
+	public CodeQueryResult<WhileStatementSyntax> GetWhile(string? condition = null) =>
 		Get<WhileStatementSyntax>(statement => condition is null || statement.Condition.ToString() == condition);
 
 	/// <summary>
@@ -49,7 +49,7 @@ public sealed partial class CodeQuery
 	/// Gets the first <c>if</c> statement.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No statement matched.</exception>
-	public IfStatementSyntax GetIf() => Get<IfStatementSyntax>();
+	public CodeQueryResult<IfStatementSyntax> GetIf() => Get<IfStatementSyntax>();
 
 	/// <summary>
 	/// Determines whether an <c>if</c> statement exists.
@@ -60,7 +60,7 @@ public sealed partial class CodeQuery
 	/// Gets the first <c>try</c> statement.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No statement matched.</exception>
-	public TryStatementSyntax GetTry() => Get<TryStatementSyntax>();
+	public CodeQueryResult<TryStatementSyntax> GetTry() => Get<TryStatementSyntax>();
 
 	/// <summary>
 	/// Determines whether a <c>try</c> statement exists.
@@ -71,9 +71,9 @@ public sealed partial class CodeQuery
 	/// Gets the first invocation of a method with the given simple name.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No invocation matched.</exception>
-	public InvocationExpressionSyntax GetInvocation(string methodName) =>
+	public CodeQueryResult<InvocationExpressionSyntax> GetInvocation(string methodName) =>
 		TryGetInvocation(methodName, out var invocation)
-			? invocation!
+			? new(this, invocation!)
 			: throw new SyntaxNotFoundException(
 				$"No invocation of '{methodName}' was found in the {ScopeDescription()}."
 			);

@@ -57,12 +57,11 @@ runtime dependencies to Roslyn.
 
 Because the second reference is a normal assembly reference, the generator's Roslyn dependencies
 also become visible to the test compilation. For a multi-target test project, build the generator
-against the oldest Roslyn version that supports its API usage and is compatible with the oldest
-test target. This framework supports Roslyn 4.13; prefer
-`IncrementalGeneratorInitializationContext.RegisterEmbeddedAttribute(...)` over Roslyn 4.14's
-`IncrementalGeneratorPostInitializationContext.AddEmbeddedAttributeDefinition()` when the tests
-must also target .NET 8. Do not centrally pin `System.Collections.Immutable` to a newer runtime
-version merely to make the generator load.
+against the Roslyn version that supports its API usage and is compatible with the oldest test target.
+This framework is built against Roslyn 5.0 (C# 14 / .NET 10 generation), which ships `net8.0` and
+`net9.0` package assets, so a `.NET 8`–`.NET 10` test matrix still loads it. Compiler hosts must be
+Roslyn 5.0 or later (`.NET 10` SDK / Visual Studio 2026). Do not centrally pin
+`System.Collections.Immutable` to a newer runtime version merely to make the generator load.
 
 ## Installation
 
@@ -186,7 +185,7 @@ Two mechanisms cooperate:
 - **Context-aware composition** — pass the available `GenerationSettings` or `CodeWriter` to only append the annotation when nullable is enabled or unknown:
 
 ```csharp
-writer.Type(PurviewTypeLibrary.System.String.MakeNullable(writer)); // elides "?" when nullable is off
+writer.Type(TypeLibrary.System.String.MakeNullable(writer)); // elides "?" when nullable is off
 ```
 
 - **Context-aware rendering** — the writer elides reference annotations when it renders with nullable disabled. `Type(TypeReference)` renders a bare reference using the writer's nullable context, and `RenderFullNameForNullable(bool)` exposes the same behavior for direct string building:
@@ -399,6 +398,47 @@ var parameterized = resourceKitBase.MakeGeneric("TResource");
 // Describes the open List<> definition and matches any List<T> construction.
 var openList = new TypeIdentity(typeof(List<>));
 ```
+
+`TypeLibrary` provides ready-made identities for common types — primitives, the
+`System.Collections.Generic`, `System.Collections.Concurrent`, `System.Collections.ObjectModel` and
+`System.Collections.Immutable` collections (including read-only lists/dictionaries, immutable
+interfaces and builders), and the generated-code marker attributes. Collection entries are open
+generic definitions, so `TypeLibrary.System.Collections.Generic.List.Matches(symbol)` recognizes any
+`List<T>` construction. Construct a concrete reference with `MakeGeneric`:
+
+```csharp
+writer.Property(
+    "Items",
+    TypeLibrary.System.Collections.Generic.IReadOnlyList.MakeGeneric(TypeIdentity.Create<string>()));
+```
+
+For a family of arities such as `Func`, pass the arity to the constructor (defaulting to `0`, so
+existing code is unchanged) or use `WithArity(int)` to produce the matching open definition:
+
+```csharp
+var func = new TypeIdentity("Func", "System", 1);       // Func<TResult>
+var high = TypeLibrary.System.Func.WithArity(17);       // Func<T1..T16, TResult>
+```
+
+`null` is a literal value, not a type, so it has no `TypeIdentity` to match. For value positions,
+`TypeLibrary.System.Null` / `TypeIdentity.Null` (or `TypeReference.Null`) renders as the bare `null`
+keyword and converts to the `"null"` expression in initializers, default values, arguments and return
+values. `TypeIdentity.Empty` remains the distinct "no type / unset" sentinel, and the `CodeWriter`
+rejects a null literal in any type position:
+
+```csharp
+writer.Property(
+    "Fallback",
+    TypeIdentity.Create<string>().MakeNullable(writer),
+    TypeDeclarationAccessibility.Public,
+    options => options with { HasSetter = true, Initializer = TypeIdentity.Null });
+// public string? Fallback { get; set; } = null;
+
+symbol.HasNullDefaultValue(); // const string S = null!; / optional string p = null
+```
+
+Because Roslyn exposes no type for the null literal, `TypeIdentity.Null.Matches(symbol)` is always
+`false`; use `HasNullDefaultValue()` (on `ISymbol`) for the closest real "null-ness" signal.
 
 For contract-aware comparisons, a constructed expected argument may be an interface or base type.
 `TypeHelpers.Is` and the symbol overload of `IsDerivedFromExpectedBase` accept an actual generic
@@ -781,7 +821,7 @@ throws `SyntaxNotFoundException` when nothing matches; `Has` returns `bool`).
 
 ```csharp
 // Source generators — generated trees first, or the whole output compilation.
-var method = result.Generated.GetMethod("DoWork");       // MethodDeclarationSyntax (throws if absent)
+var method = result.Generated.GetMethod("DoWork");       // CodeQueryResult<MethodDeclarationSyntax> (throws if absent)
 bool hasMethod = result.Generated.HasMethod("DoWork");   // true/false
 result.Generated.TryGetMethod("DoWork", out var maybe);
 var inOutput = result.Output.GetClass("Generated_Service");   // full output compilation
@@ -789,7 +829,7 @@ var inOutput = result.Output.GetClass("Generated_Service");   // full output com
 // Match parameter types using TypeReference, resolving through the compilation's semantic model.
 result.Generated.HasMethod("DoWork", TypeReference.Create<int>(), TypeReference.Create<int>().Nullable(), complexType);
 result.Generated.HasReturnType("Compute", TypeReference.Create<int>());
-result.Generated.GetMethod("Format").HasParameters(query, TypeReference.Create<string>(), objectReference);
+result.Generated.GetMethod("Format").HasParameters(TypeReference.Create<string>(), objectReference);
 
 // Other declaration kinds.
 result.Generated.GetClass("X"); result.Generated.HasClass("X");
@@ -804,14 +844,17 @@ result.Generated.GetClass("Widget");                 // anywhere
 result.Generated.GetClass("Widget", "Example.Models"); // within a namespace
 
 // Chain from a type declaration to inspect its members, matching return/property/parameter types.
+// Every Get returns a CodeQueryResult<T>: use .Node for direct syntax access, or chain member queries
+// (the originating query is carried by the result, so it is not passed again).
 var service = result.Generated.GetClass("ServiceCollectionExtensions"); // or any namespace
-service.HasProperty(query, "Count", intType);                          // property + type
-service.HasIndexer(query, stringType, intType);                        // indexer + return + index param
-service.HasMethod(query, "Add", intType, complexType);                 // method + parameter types
-service.HasMethodReturnType(query, "Add", stringType);                 // method + return type
-service.HasConstructor(query, stringType);                             // ctor + parameter types
-service.GetMethod(query, "Add").HasReturnType(query, stringType);
-service.GetProperty(query, "Name").HasType(query, stringType);
+service.HasProperty("Count", intType);                                 // property + type
+service.HasIndexer(stringType, intType);                               // indexer + return + index param
+service.HasMethod("Add", intType, complexType);                        // method + parameter types
+service.HasMethodReturnType("Add", stringType);                        // method + return type
+service.HasConstructor(stringType);                                    // ctor + parameter types
+service.GetMethod("Add").HasReturnType(stringType);
+service.GetProperty("Name").HasType(stringType);
+service.HasAttribute("SomeAttribute");                                 // attributes on the type
 ```
 
 Analyzer and code-fix results expose the same API:

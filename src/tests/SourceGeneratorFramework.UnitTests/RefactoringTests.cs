@@ -75,7 +75,7 @@ public class RefactoringTests : TUnitRefactoringTestBase<AddObsoleteRefactoringP
 
 		var method = result.FixedCode().GetMethod("DoWork");
 
-		await Assert.That(method.AttributeLists).IsNotEmpty();
-		await Assert.That(method.AttributeLists[0].ToString()).Contains("Obsolete");
+		await Assert.That(method.Node.AttributeLists).IsNotEmpty();
+		await Assert.That(method.Node.AttributeLists[0].ToString()).Contains("Obsolete");
 	}
 }

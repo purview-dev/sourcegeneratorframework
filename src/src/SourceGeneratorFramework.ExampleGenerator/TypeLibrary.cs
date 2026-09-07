@@ -3,7 +3,7 @@ namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 /// <summary>
 /// Provides <see cref="TypeIdentity"/> instances used by the service registration generator.
 /// </summary>
-static class TypeLibrary
+static class PurviewTypeLibrary
 {
 	const string ExpamplesNamespace = "Purview.SourceGeneratorFramework.Examples";
 

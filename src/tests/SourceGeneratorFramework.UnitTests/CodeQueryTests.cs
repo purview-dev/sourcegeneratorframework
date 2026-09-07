@@ -40,7 +40,7 @@ public class CodeQueryTests
 
 		var method = query.GetMethod("DoWork");
 
-		await Assert.That(method.Identifier.ValueText).IsEqualTo("DoWork");
+		await Assert.That(method.Node.Identifier.ValueText).IsEqualTo("DoWork");
 	}
 
 	[Test]
@@ -82,7 +82,7 @@ public class CodeQueryTests
 		var complexType = new TypeReference(new TypeIdentity("ComplexType", "Test"));
 
 		var method = query.GetMethod("DoWork", intType, nullableInt, complexType);
-		await Assert.That(method.Identifier.ValueText).IsEqualTo("DoWork");
+		await Assert.That(method.Node.Identifier.ValueText).IsEqualTo("DoWork");
 	}
 
 	[Test]
@@ -115,8 +115,8 @@ public class CodeQueryTests
 		var stringType = TypeReference.Create<string>();
 		var objectType = TypeReference.Create<object>().Nullable();
 
-		await Assert.That(method.HasParameters(query, stringType, objectType)).IsTrue();
-		await Assert.That(method.HasParameters(query, stringType)).IsFalse();
+		await Assert.That(method.HasParameters(stringType, objectType)).IsTrue();
+		await Assert.That(method.HasParameters(stringType)).IsFalse();
 	}
 
 	[Test]
@@ -124,11 +124,11 @@ public class CodeQueryTests
 	{
 		var query = CreateQuery();
 
-		await Assert.That(query.GetClass("Sample").Identifier.ValueText).IsEqualTo("Sample");
-		await Assert.That(query.GetInterface("IContract").Identifier.ValueText).IsEqualTo("IContract");
-		await Assert.That(query.GetEnum("Level").Identifier.ValueText).IsEqualTo("Level");
-		await Assert.That(query.GetDelegate("Handler").Identifier.ValueText).IsEqualTo("Handler");
-		await Assert.That(query.GetRecord("Person").Identifier.ValueText).IsEqualTo("Person");
+		await Assert.That(query.GetClass("Sample").Node.Identifier.ValueText).IsEqualTo("Sample");
+		await Assert.That(query.GetInterface("IContract").Node.Identifier.ValueText).IsEqualTo("IContract");
+		await Assert.That(query.GetEnum("Level").Node.Identifier.ValueText).IsEqualTo("Level");
+		await Assert.That(query.GetDelegate("Handler").Node.Identifier.ValueText).IsEqualTo("Handler");
+		await Assert.That(query.GetRecord("Person").Node.Identifier.ValueText).IsEqualTo("Person");
 		await Assert.That(query.HasClass("Missing")).IsFalse();
 		await Assert.That(query.HasInterface("IContract")).IsTrue();
 	}
@@ -138,10 +138,10 @@ public class CodeQueryTests
 	{
 		var query = CreateQuery();
 
-		await Assert.That(query.GetProperty("Count").Identifier.ValueText).IsEqualTo("Count");
+		await Assert.That(query.GetProperty("Count").Node.Identifier.ValueText).IsEqualTo("Count");
 		await Assert.That(query.HasProperty("Name")).IsTrue();
 		await Assert
-			.That(query.GetField("Constant").Declaration.Variables[0].Identifier.ValueText)
+			.That(query.GetField("Constant").Node.Declaration.Variables[0].Identifier.ValueText)
 			.IsEqualTo("Constant");
 		await Assert.That(query.HasField("Constant")).IsTrue();
 		await Assert.That(query.HasField("Missing")).IsFalse();
@@ -156,6 +156,91 @@ public class CodeQueryTests
 		await Assert.That(query.HasTypeDeclaration("IContract")).IsTrue();
 		await Assert.That(query.HasTypeDeclaration("Person")).IsTrue();
 		await Assert.That(query.HasTypeDeclaration("Missing")).IsFalse();
+	}
+
+	[Test]
+	public async Task TypeDeclarationQueries_WithTypeReferenceIdentity_FindDeclarations()
+	{
+		var query = CreateQuery();
+
+		var sample = new TypeReference(new TypeIdentity("Sample", "Test"));
+		var contract = new TypeReference(new TypeIdentity("IContract", "Test"));
+		var level = new TypeReference(new TypeIdentity("Level", "Test"));
+		var handler = new TypeReference(new TypeIdentity("Handler", "Test"));
+		var person = new TypeReference(new TypeIdentity("Person", "Test"));
+
+		await Assert.That(query.GetClass(sample).Node.Identifier.ValueText).IsEqualTo("Sample");
+		await Assert.That(query.HasClass(sample)).IsTrue();
+		await Assert.That(query.HasClass(new TypeReference(new TypeIdentity("Missing", "Test")))).IsFalse();
+		await Assert.That(query.GetInterface(contract).Node.Identifier.ValueText).IsEqualTo("IContract");
+		await Assert.That(query.GetEnum(level).Node.Identifier.ValueText).IsEqualTo("Level");
+		await Assert.That(query.GetDelegate(handler).Node.Identifier.ValueText).IsEqualTo("Handler");
+		await Assert.That(query.GetRecord(person).Node.Identifier.ValueText).IsEqualTo("Person");
+	}
+
+	[Test]
+	public async Task TypeDeclarationQueries_WithTypeReferenceIdentity_NamespaceScoped()
+	{
+		var query = CreateQuery();
+
+		await Assert.That(query.HasClass(new TypeReference(new TypeIdentity("Sample", "Test")))).IsTrue();
+		await Assert.That(query.HasClass(new TypeReference(new TypeIdentity("Sample", "Other")))).IsFalse();
+		await Assert.That(query.HasClass(new TypeReference(new TypeIdentity("Sample", null)))).IsTrue();
+	}
+
+	[Test]
+	public async Task TypeDeclarationQueries_WithTypeIdentityValue_ImplicitlyConverts()
+	{
+		var query = CreateQuery();
+		var sample = new TypeIdentity("Sample", "Test");
+
+		await Assert.That(query.GetClass(sample).Node.Identifier.ValueText).IsEqualTo("Sample");
+		await Assert.That(query.HasClass(sample)).IsTrue();
+		await Assert.That(query.HasRecord(new TypeIdentity("Person", "Test"))).IsTrue();
+		await Assert.That(query.TryGetClass(sample, out var declaration)).IsTrue();
+		await Assert.That(declaration).IsNotNull();
+	}
+
+	[Test]
+	public async Task TryGetClass_WithTypeReferenceIdentity_ReturnsNode()
+	{
+		var query = CreateQuery();
+		var sample = new TypeReference(new TypeIdentity("Sample", "Test"));
+
+		await Assert.That(query.TryGetClass(sample, out var declaration)).IsTrue();
+		await Assert.That(declaration).IsNotNull();
+		await Assert.That(query.TryGetClass(new TypeReference(new TypeIdentity("Missing", "Test")), out _)).IsFalse();
+	}
+
+	[Test]
+	public async Task GetTypeDeclaration_WithTypeReferenceIdentity_MatchesAnyDeclarationKind()
+	{
+		var query = CreateQuery();
+
+		await Assert.That(query.GetTypeDeclaration(new TypeReference(new TypeIdentity("Sample", "Test")))).IsNotNull();
+		await Assert.That(query.HasTypeDeclaration(new TypeReference(new TypeIdentity("IContract", "Test")))).IsTrue();
+		await Assert.That(query.HasTypeDeclaration(new TypeReference(new TypeIdentity("Person", "Test")))).IsTrue();
+		await Assert.That(query.HasTypeDeclaration(new TypeReference(new TypeIdentity("Missing", "Test")))).IsFalse();
+	}
+
+	[Test]
+	public async Task GetStruct_WithTypeReferenceIdentity_FindsDeclaration()
+	{
+		// Arrange
+		const string source = """
+			namespace Test;
+
+			public struct Money { }
+			""";
+		var (compilation, _) = TestCompilation.CreateWithRoot(source);
+		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+
+		// Act / Assert
+		await Assert
+			.That(query.GetStruct(new TypeReference(new TypeIdentity("Money", "Test"))).Node.Identifier.ValueText)
+			.IsEqualTo("Money");
+		await Assert.That(query.HasStruct(new TypeReference(new TypeIdentity("Money", "Test")))).IsTrue();
+		await Assert.That(query.HasStruct(new TypeReference(new TypeIdentity("Money", "Other")))).IsFalse();
 	}
 
 	[Test]
@@ -219,11 +304,11 @@ public class CodeQueryTests
 	}
 
 	[Test]
-	public async Task NestedQuery_ChainingExtension_ScopesSearches()
+	public async Task NestedQuery_QueryProperty_ScopesSearches()
 	{
 		var query = CreateQuery();
 
-		var nested = query.GetClass("Sample").Query(query);
+		var nested = query.GetClass("Sample").Query;
 
 		await Assert.That(nested.HasProperty("Count")).IsTrue();
 		await Assert.That(nested.HasField("Constant")).IsTrue();
@@ -274,7 +359,7 @@ public class CodeQueryTests
 		await Assert.That(query.HasOperator("!=")).IsTrue();
 		await Assert.That(query.HasConversionOperator("implicit")).IsTrue();
 		await Assert.That(query.HasOperator("+")).IsFalse();
-		await Assert.That(query.GetOperator("==").ParameterList.Parameters.Count).IsEqualTo(2);
+		await Assert.That(query.GetOperator("==").Node.ParameterList.Parameters.Count).IsEqualTo(2);
 
 		await Assert.That(query.HasIndexer(TypeReference.Create<int>())).IsTrue();
 		await Assert.That(query.HasIndexer(TypeReference.Create<string>())).IsFalse();
@@ -311,7 +396,7 @@ public class CodeQueryTests
 		await Assert.That(query.HasOperator("!=", moneyType, moneyType)).IsTrue();
 		await Assert.That(query.HasOperator("+", moneyType, moneyType)).IsFalse();
 		await Assert.That(query.HasOperator("<", stringType, moneyType)).IsFalse();
-		await Assert.That(query.GetOperator("==", moneyType, moneyType).OperatorToken.ValueText).IsEqualTo("==");
+		await Assert.That(query.GetOperator("==", moneyType, moneyType).Node.OperatorToken.ValueText).IsEqualTo("==");
 	}
 
 	[Test]
@@ -339,7 +424,7 @@ public class CodeQueryTests
 		await Assert.That(query.HasConversionOperator("explicit", moneyType)).IsTrue();
 		await Assert.That(query.HasConversionOperator("explicit", stringType)).IsFalse();
 		await Assert
-			.That(query.GetConversionOperator("implicit", moneyType).ImplicitOrExplicitKeyword.ValueText)
+			.That(query.GetConversionOperator("implicit", moneyType).Node.ImplicitOrExplicitKeyword.ValueText)
 			.IsEqualTo("implicit");
 	}
 

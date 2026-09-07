@@ -7,7 +7,8 @@ using TUnit.Assertions.Core;
 namespace Purview.SourceGeneratorFramework.Testing.TUnit.Assertions;
 
 /// <summary>
-/// TUnit assertion extensions that query the code produced by a test run and return the matched syntax node.
+/// TUnit assertion extensions that query the code produced by a test run and return the matched syntax node,
+/// wrapped as a <see cref="CodeQueryResult{T}"/> so member queries can chain without re-passing the query.
 /// </summary>
 public static partial class CodeQueryAssertions
 {
@@ -20,7 +21,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasGeneratedMethod(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasGeneratedMethod(
 		this DriverRunResult result,
 		string methodName
 	) => GetMethod(result?.Generated(), methodName, null, "generated code");
@@ -30,7 +31,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasGeneratedMethod(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasGeneratedMethod(
 		this DriverRunResult result,
 		string methodName,
 		TypeReference[] parameters
@@ -41,7 +42,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasGeneratedMethodReturnType(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasGeneratedMethodReturnType(
 		this DriverRunResult result,
 		string methodName,
 		TypeReference returnType
@@ -49,16 +50,19 @@ public static partial class CodeQueryAssertions
 	{
 		var query = result?.Generated();
 		if (query is null)
-			return (AssertionResult<MethodDeclarationSyntax>)AssertionResult.Failed("expected DriverRunResult is null");
+			return (AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>)
+				AssertionResult.Failed("expected DriverRunResult is null");
 		if (string.IsNullOrWhiteSpace(methodName))
-			return (AssertionResult<MethodDeclarationSyntax>)
+			return (AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>)
 				AssertionResult.Failed("method name cannot be null or whitespace");
 
 		if (query.TryGetMethod(methodName, out var method) && query.HasReturnType(methodName, returnType))
-			return AssertionResult<MethodDeclarationSyntax>.Passed(method!);
+			return AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>.Passed(
+				new CodeQueryResult<MethodDeclarationSyntax>(query, method!)
+			);
 
 		// If the method exists but has a different return type, we could provide more detail in the failure message.
-		return (AssertionResult<MethodDeclarationSyntax>)
+		return (AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>)
 			AssertionResult.Failed(
 				$"generated code did not contain a method named '{methodName}' with the expected return type"
 			);
@@ -69,24 +73,54 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<ClassDeclarationSyntax> HasGeneratedClass(
+	public static AssertionResult<CodeQueryResult<ClassDeclarationSyntax>> HasGeneratedClass(
 		this DriverRunResult result,
 		string className
 	)
 	{
 		var query = result?.Generated();
 		if (query is null)
-			return (AssertionResult<ClassDeclarationSyntax>)AssertionResult.Failed("expected DriverRunResult is null");
+			return (AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>)
+				AssertionResult.Failed("expected DriverRunResult is null");
 		if (string.IsNullOrWhiteSpace(className))
-			return (AssertionResult<ClassDeclarationSyntax>)
+			return (AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>)
 				AssertionResult.Failed("class name cannot be null or whitespace");
 
 		if (query.TryGetClass(className, out var declaration))
-			return AssertionResult<ClassDeclarationSyntax>.Passed(declaration!);
+			return AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>.Passed(
+				new CodeQueryResult<ClassDeclarationSyntax>(query, declaration!)
+			);
 
 		// If the class exists but has a different type, we could provide more detail in the failure message.
-		return (AssertionResult<ClassDeclarationSyntax>)
+		return (AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>)
 			AssertionResult.Failed($"generated code did not contain a class named '{className}'");
+	}
+
+	/// <summary>
+	/// Asserts that the generated code contains a class with the given type identity, returning it.
+	/// </summary>
+	[GenerateAssertion]
+	[EditorBrowsable(EditorBrowsableState.Never)]
+	public static AssertionResult<CodeQueryResult<ClassDeclarationSyntax>> HasGeneratedClass(
+		this DriverRunResult result,
+		TypeReference type
+	)
+	{
+		var query = result?.Generated();
+		if (query is null)
+			return (AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>)
+				AssertionResult.Failed("expected DriverRunResult is null");
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+
+		if (query.TryGetClass(type, out var declaration))
+			return AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>.Passed(
+				new CodeQueryResult<ClassDeclarationSyntax>(query, declaration!)
+			);
+
+		// If the class exists but has a different type, we could provide more detail in the failure message.
+		return (AssertionResult<CodeQueryResult<ClassDeclarationSyntax>>)
+			AssertionResult.Failed($"generated code did not contain a class named '{type.Identity.Name}'");
 	}
 
 	/// <summary>
@@ -94,24 +128,26 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<PropertyDeclarationSyntax> HasGeneratedProperty(
+	public static AssertionResult<CodeQueryResult<PropertyDeclarationSyntax>> HasGeneratedProperty(
 		this DriverRunResult result,
 		string propertyName
 	)
 	{
 		var query = result?.Generated();
 		if (query is null)
-			return (AssertionResult<PropertyDeclarationSyntax>)
+			return (AssertionResult<CodeQueryResult<PropertyDeclarationSyntax>>)
 				AssertionResult.Failed("expected DriverRunResult is null");
 		if (string.IsNullOrWhiteSpace(propertyName))
-			return (AssertionResult<PropertyDeclarationSyntax>)
+			return (AssertionResult<CodeQueryResult<PropertyDeclarationSyntax>>)
 				AssertionResult.Failed("property name cannot be null or whitespace");
 
 		if (query.TryGetProperty(propertyName, out var declaration))
-			return AssertionResult<PropertyDeclarationSyntax>.Passed(declaration!);
+			return AssertionResult<CodeQueryResult<PropertyDeclarationSyntax>>.Passed(
+				new CodeQueryResult<PropertyDeclarationSyntax>(query, declaration!)
+			);
 
 		// If the property exists but has a different type, we could provide more detail in the failure message.
-		return (AssertionResult<PropertyDeclarationSyntax>)
+		return (AssertionResult<CodeQueryResult<PropertyDeclarationSyntax>>)
 			AssertionResult.Failed($"generated code did not contain a property named '{propertyName}'");
 	}
 
@@ -120,23 +156,26 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<FieldDeclarationSyntax> HasGeneratedField(
+	public static AssertionResult<CodeQueryResult<FieldDeclarationSyntax>> HasGeneratedField(
 		this DriverRunResult result,
 		string fieldName
 	)
 	{
 		var query = result?.Generated();
 		if (query is null)
-			return (AssertionResult<FieldDeclarationSyntax>)AssertionResult.Failed("expected DriverRunResult is null");
+			return (AssertionResult<CodeQueryResult<FieldDeclarationSyntax>>)
+				AssertionResult.Failed("expected DriverRunResult is null");
 		if (string.IsNullOrWhiteSpace(fieldName))
-			return (AssertionResult<FieldDeclarationSyntax>)
+			return (AssertionResult<CodeQueryResult<FieldDeclarationSyntax>>)
 				AssertionResult.Failed("field name cannot be null or whitespace");
 
 		if (query.TryGetField(fieldName, out var declaration))
-			return AssertionResult<FieldDeclarationSyntax>.Passed(declaration!);
+			return AssertionResult<CodeQueryResult<FieldDeclarationSyntax>>.Passed(
+				new CodeQueryResult<FieldDeclarationSyntax>(query, declaration!)
+			);
 
 		// If the field exists but has a different type, we could provide more detail in the failure message.
-		return (AssertionResult<FieldDeclarationSyntax>)
+		return (AssertionResult<CodeQueryResult<FieldDeclarationSyntax>>)
 			AssertionResult.Failed($"generated code did not contain a field named '{fieldName}'");
 	}
 
@@ -170,7 +209,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasFixedMethod(
 		this CodeFixTestResult result,
 		string methodName
 	) => GetMethod(result?.FixedCode(), methodName, null, "fixed code");
@@ -180,7 +219,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasFixedMethod(
 		this CodeFixTestResult result,
 		string methodName,
 		TypeReference[] parameters
@@ -191,7 +230,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasFixedMethod(
 		this CodeFixFixAllResult result,
 		string methodName
 	) => GetMethod(result?.FixedCode(), methodName, null, "fixed code");
@@ -201,7 +240,7 @@ public static partial class CodeQueryAssertions
 	/// </summary>
 	[GenerateAssertion]
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public static AssertionResult<MethodDeclarationSyntax> HasFixedMethod(
+	public static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> HasFixedMethod(
 		this RefactorTestResult result,
 		string methodName
 	) => GetMethod(result?.FixedCode(), methodName, null, "refactored code");
@@ -210,7 +249,7 @@ public static partial class CodeQueryAssertions
 	// Shared
 	// ---------------------------------------------------------------------------------------------
 
-	static AssertionResult<MethodDeclarationSyntax> GetMethod(
+	static AssertionResult<CodeQueryResult<MethodDeclarationSyntax>> GetMethod(
 		CodeQuery? query,
 		string methodName,
 		TypeReference[]? parameters,
@@ -218,16 +257,19 @@ public static partial class CodeQueryAssertions
 	)
 	{
 		if (query is null)
-			return (AssertionResult<MethodDeclarationSyntax>)AssertionResult.Failed("expected test result is null");
+			return (AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>)
+				AssertionResult.Failed("expected test result is null");
 		if (string.IsNullOrWhiteSpace(methodName))
-			return (AssertionResult<MethodDeclarationSyntax>)
+			return (AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>)
 				AssertionResult.Failed("method name cannot be null or whitespace");
 
 		if (query.TryGetMethod(methodName, out var method, parameters))
-			return AssertionResult<MethodDeclarationSyntax>.Passed(method!);
+			return AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>.Passed(
+				new CodeQueryResult<MethodDeclarationSyntax>(query, method!)
+			);
 
 		// If the method exists but has different parameters, we could provide more detail in the failure message.
-		return (AssertionResult<MethodDeclarationSyntax>)
+		return (AssertionResult<CodeQueryResult<MethodDeclarationSyntax>>)
 			AssertionResult.Failed($"{scope} did not contain a method named '{methodName}'");
 	}
 }

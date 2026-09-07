@@ -102,6 +102,11 @@ pack solutionOrProject=solution configuration=build_configuration publish_folder
 version:
     echo "Current version: {{ GREEN }}{{ current_version }}{{ NORMAL }}"
 
+# Open the solution in Visual Studio/ Registered application
+[group('Utilities')]
+vs:
+    open {{ solution }}
+
 # Check code formatting using CSharpier
 [group('Utilities')]
 lint-check:
@@ -114,7 +119,10 @@ lint-fix:
     dotnet csharpier format .
     # dotnet format {{ solution }}
 
-# Open the solution in Visual Studio/ Registered application
+# Clean up the repository by removing build artifacts, bin/obj folders etc, and shutting down the build server
 [group('Utilities')]
-vs:
-    open {{ solution }}
+scrub:
+    find . -type d \( -name bin -o -name obj -o -name .vs \) -exec rm -rf {} +
+    just clean
+    just restore --force-evaluate
+    dotnet build-server shutdown

@@ -195,9 +195,10 @@ public record SourceGeneratorTestOptions
 	public NullableContextOptions NullableContextOptions { get; init; } = NullableContextOptions.Enable;
 
 	/// <summary>
-	/// Gets the language version of the test compilation.
+	/// Gets the language version of the test compilation. The default is C# 14, the framework's
+	/// Roslyn 5.x baseline, keeping in-memory test compilations deterministic.
 	/// </summary>
-	public LanguageVersion LanguageVersion { get; init; } = LanguageVersion.Preview;
+	public LanguageVersion LanguageVersion { get; init; } = LanguageVersion.CSharp14;
 
 	/// <summary>
 	/// Gets generated hint names to exclude from the syntax tree collection. These

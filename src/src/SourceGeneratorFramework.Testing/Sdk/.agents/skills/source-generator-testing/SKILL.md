@@ -57,24 +57,29 @@ Every `Get` has an accompanying `Has` (bool) and `TryGet` (out): `GetMethod`/`Ha
 `GetField`, `GetConstructor`, `GetNamespace`, `GetTypeDeclaration`, plus generic `Get<T>`/`Has<T>`
 and `GetSyntaxTree`/`HasSyntaxTree`. `Get` throws `SyntaxNotFoundException` when nothing matches.
 
+Every `Get` returns a `CodeQueryResult<T>` — the matched syntax node (`Node`) plus a query scoped to it
+(`Query`), with implicit conversions to both the node and the scoped query. Use `.Node` for direct syntax
+access, or chain member queries (the originating query is carried by the result, so it is not passed again).
+
 Types can be matched against `TypeReference`/`TypeIdentity`, resolved through the compilation's semantic
 model (nullable value types are significant, so `int?` never matches `int`):
 
 ```csharp
 result.Generated().HasMethod("DoWork", TypeReference.Create<int>(), TypeReference.Create<int>().Nullable(), complexType);
 result.Generated().HasReturnType("Compute", TypeReference.Create<int>());
-result.Generated().GetMethod("Format").HasParameters(query, TypeReference.Create<string>(), objectReference);
+result.Generated().GetMethod("Format").HasParameters(TypeReference.Create<string>(), objectReference);
 ```
 
 Member chaining from a type declaration (`MemberQueryExtensions`):
 
 ```csharp
 var service = result.Generated().GetClass("ServiceCollectionExtensions"); // or GetClass(name, "Namespace")
-service.HasProperty(query, "Count", intType);
-service.HasIndexer(query, stringType, intType);
-service.HasMethod(query, "Add", intType, complexType);
-service.HasMethodReturnType(query, "Add", stringType);
-service.HasConstructor(query, stringType);
+service.HasProperty("Count", intType);
+service.HasIndexer(stringType, intType);
+service.HasMethod("Add", intType, complexType);
+service.HasMethodReturnType("Add", stringType);
+service.HasConstructor(stringType);
+service.HasAttribute("SomeAttribute");
 ```
 
 ## Configuring options and a reusable starting point
@@ -121,8 +126,9 @@ example to append a marker attribute source via `WithAdditionalSources`).
 - **Generator references**: to use a generated type in the test project AND pass the generator type to a
   runner, reference the generator project twice — once `OutputItemType="Analyzer"` and once as a normal
   reference.
-- **Multi-target**: build generators against the oldest Roslyn the test matrix needs (Roslyn 4.13 for
-  .NET 8–10); keep `System.Collections.Immutable` version pinned to the shared one.
+- **Multi-target**: build generators against the Roslyn version that supports the test matrix; the
+  framework is built against Roslyn 5.0 (net8.0/net9.0 assets keep a .NET 8–10 matrix loading); keep
+  `System.Collections.Immutable` version pinned to the shared one.
 - **Scope validation**: keep `PurviewSourceGeneratorFrameworkValidateCodeWriterScopes` enabled; it makes
   undisposed `CodeWriter` scopes fail tests.
 - **Prefer `CodeQuery` over string matching** for structural assertions (members, signatures, namespaces).
