@@ -568,7 +568,38 @@ public readonly record struct TypeIdentity
 			if (!TypeArguments.IsDefaultOrEmpty)
 			{
 				foreach (var argument in TypeArguments)
-					hashCode = (hashCode * 397) ^ (argument?.GetHashCode() ?? 0);
+				{
+					if (argument is null)
+						continue;
+					hashCode = (hashCode * 397) ^ TypeReferenceHash(argument);
+				}
+			}
+
+			return hashCode;
+		}
+	}
+
+	// Hashes a type argument by its identity and modifiers without calling TypeReference.GetHashCode, which
+	// would re-enter TypeIdentity.GetHashCode and create an unbounded TypeIdentity <-> TypeReference recursion
+	// when the arguments are themselves constructed generics.
+	static int TypeReferenceHash(TypeReference reference)
+	{
+		unchecked
+		{
+			var hashCode = (int)reference.Kind;
+			hashCode =
+				(hashCode * 397)
+				^ (
+					reference.TypeParameterName is null
+						? 0
+						: StringComparer.Ordinal.GetHashCode(reference.TypeParameterName)
+				);
+			hashCode = (hashCode * 397) ^ reference.Identity.GetHashCode();
+
+			if (!reference.Modifiers.IsDefaultOrEmpty)
+			{
+				foreach (var modifier in reference.Modifiers)
+					hashCode = (hashCode * 397) ^ modifier.GetHashCode();
 			}
 
 			return hashCode;
@@ -1001,7 +1032,7 @@ public readonly record struct TypeIdentity
 
 		for (var index = 0; index < leftCount; index++)
 		{
-			if (!Equals(left[index], right[index]))
+			if (!TypeReferenceEqual(left[index], right[index]))
 				return false;
 		}
 
@@ -1018,8 +1049,103 @@ public readonly record struct TypeIdentity
 
 		for (var index = 0; index < leftCount; index++)
 		{
-			if (!left[index].Similar(right[index]))
+			if (!TypeReferenceSimilar(left[index], right[index]))
 				return false;
+		}
+
+		return true;
+	}
+
+	// Compares a type argument by its identity and modifiers without calling TypeReference.Equals, which would
+	// re-enter TypeIdentity.Equals and create an unbounded TypeIdentity <-> TypeReference recursion when the
+	// arguments are themselves constructed generics.
+	static bool TypeReferenceEqual(TypeReference left, TypeReference right)
+	{
+		if (ReferenceEquals(left, right))
+			return true;
+
+		if (left.Kind != right.Kind)
+			return false;
+
+		if (!string.Equals(left.TypeParameterName, right.TypeParameterName, StringComparison.Ordinal))
+			return false;
+
+		if (left.Kind == TypeReferenceKind.Named && !left.Identity.Equals(right.Identity))
+			return false;
+
+		return TypeReferenceModifiersEqual(left.Modifiers, right.Modifiers);
+	}
+
+	static bool TypeReferenceSimilar(TypeReference left, TypeReference right)
+	{
+		if (ReferenceEquals(left, right))
+			return true;
+
+		if (left.Kind != right.Kind)
+			return false;
+
+		if (!string.Equals(left.TypeParameterName, right.TypeParameterName, StringComparison.Ordinal))
+			return false;
+
+		if (left.Kind == TypeReferenceKind.Named && !left.Identity.Similar(right.Identity))
+			return false;
+
+		return TypeReferenceModifiersSimilar(left.Modifiers, right.Modifiers);
+	}
+
+	static bool TypeReferenceModifiersEqual(ImmutableArray<TypeModifier> left, ImmutableArray<TypeModifier> right)
+	{
+		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
+		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
+
+		if (leftCount != rightCount)
+			return false;
+
+		for (var index = 0; index < leftCount; index++)
+		{
+			if (!left[index].Equals(right[index]))
+				return false;
+		}
+
+		return true;
+	}
+
+	static bool TypeReferenceModifiersSimilar(ImmutableArray<TypeModifier> left, ImmutableArray<TypeModifier> right)
+	{
+		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
+		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
+
+		var index = 0;
+		var otherIndex = 0;
+		while (index < leftCount || otherIndex < rightCount)
+		{
+			var modifier = index < leftCount ? left[index] : (TypeModifier?)null;
+			var otherModifier = otherIndex < rightCount ? right[otherIndex] : (TypeModifier?)null;
+
+			if (modifier is { Kind: TypeModifierKind.Nullable, NullableKind: NullableModifierKind.Reference })
+			{
+				index++;
+				continue;
+			}
+
+			if (otherModifier is { Kind: TypeModifierKind.Nullable, NullableKind: NullableModifierKind.Reference })
+			{
+				otherIndex++;
+				continue;
+			}
+
+			if (modifier is null || otherModifier is null)
+				return false;
+
+			if (
+				modifier.Value.Kind != otherModifier.Value.Kind
+				|| modifier.Value.Rank != otherModifier.Value.Rank
+				|| modifier.Value.NullableKind != otherModifier.Value.NullableKind
+			)
+				return false;
+
+			index++;
+			otherIndex++;
 		}
 
 		return true;

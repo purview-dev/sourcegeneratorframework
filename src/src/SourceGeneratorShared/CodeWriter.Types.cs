@@ -13,6 +13,7 @@ partial class CodeWriter
 		Method,
 		Type,
 		Namespace,
+		EnumField,
 	}
 
 	/// <summary>

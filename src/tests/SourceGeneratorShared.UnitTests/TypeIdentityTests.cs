@@ -536,4 +536,58 @@ public sealed class TypeIdentityTests
 		await Assert.That(TypeIdentity.Null.Matches(symbol)).IsFalse();
 		await Assert.That(TypeIdentity.Null.Matches(noType)).IsFalse();
 	}
+
+	[Test]
+	public async Task Equals_ConstructedGenericWithOpenGenericArgument_IsEqual()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+		var other = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		await Assert.That(resourceKitBase.Equals(other)).IsTrue();
+	}
+
+	[Test]
+	public async Task GetHashCode_ConstructedGenericWithOpenGenericArgument_DoesNotOverflow()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		await Assert.That(resourceKitBase.GetHashCode()).IsNotEqualTo(0);
+	}
+
+	[Test]
+	public async Task ImplicitConversion_ConstructedGeneric_DoesNotOverflow()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1).MakeGeneric(
+				new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace")
+			),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		TypeIdentity? nullable = resourceKitBase;
+		TypeReference? reference = nullable;
+		await Assert.That(reference is not null).IsTrue();
+		await Assert.That(reference!.Identity.Equals(resourceKitBase)).IsTrue();
+	}
+
+	[Test]
+	public async Task EqualityWithNullAndEmpty_ConstructedGeneric_DoesNotOverflow()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		await Assert.That(resourceKitBase == TypeIdentity.Null).IsFalse();
+		await Assert.That(resourceKitBase == TypeIdentity.Empty).IsFalse();
+	}
 }

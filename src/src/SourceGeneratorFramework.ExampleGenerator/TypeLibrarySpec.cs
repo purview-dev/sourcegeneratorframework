@@ -26,16 +26,16 @@ static partial class TypeLibrarySpec
 	/// nested class that represents the logging namespace's classes. <c>ILogger</c> is included in the
 	/// namespace's generated <c>GetTypes()</c> call.
 	/// </summary>
-	[TypeRef("ILogger", "Microsoft.Extensions.Logging", IncludeInGetTypes = true)]
+	[TypeRef("Microsoft.Extensions.Logging", IncludeInGetTypes = true)]
 	static readonly TypeIdentity ILogger = default;
 
-	[TypeRef("LogLevel", "Microsoft.Extensions.Logging")]
+	[TypeRef("Microsoft.Extensions.Logging")]
 	static readonly TypeIdentity LogLevel = default;
 
-	[TypeRef("EventId", "Microsoft.Extensions.Logging")]
+	[TypeRef("Microsoft.Extensions.Logging")]
 	static readonly TypeIdentity EventId = default;
 
-	[TypeRef("LoggerMessage", "Microsoft.Extensions.Logging")]
+	[TypeRef("Microsoft.Extensions.Logging")]
 	static readonly TypeIdentity LoggerMessage = default;
 
 	/// <summary>
@@ -44,7 +44,7 @@ static partial class TypeLibrarySpec
 	/// </summary>
 	[TypeRef("System.Collections.Generic")]
 	internal static readonly TypeReference SampleItems =
-		global::Purview.SourceGeneratorFramework.PurviewTypeLibrary.System.Collections.Generic.IEnumerable.MakeGeneric(
-			global::Purview.SourceGeneratorFramework.PurviewTypeLibrary.System.String
+		SourceGeneratorFramework.PurviewTypeLibrary.System.Collections.Generic.IEnumerable.MakeGeneric(
+			SourceGeneratorFramework.PurviewTypeLibrary.System.String
 		);
 }

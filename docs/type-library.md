@@ -66,6 +66,10 @@ static partial class TypeLibraryModel          // spec — separate from the gen
 }
 ```
 
+The spec class must be declared `static partial` and should use a distinct name from the generated
+class (`ClassName`, default `TypeLibrary`) — `TLB0012`/`TLB0013` flag a collision, with a code fix
+that renames the spec (e.g. `TypeLibrary` → `TypeLibraryGenerator`).
+
 ### Marker attributes
 
 | Attribute | Targets | Purpose |
@@ -85,6 +89,11 @@ All forms accept an optional generic `arity` argument (`[TypeRef("Test", 1)]`, o
 the explicit form, e.g. `[TypeRef("List`1", "System.Collections.Generic")]`); `typeof(...)` derives the
 arity from the symbol automatically.
 
+Every form also accepts an optional `includeInGetTypes` argument that follows `arity` —
+`[TypeRef("Test", 0, true)]` or `[TypeRef("ILogger", "Microsoft.Extensions.Logging", -1, true)]` — or as
+the named argument `includeInGetTypes: true`. It controls whether the member is included in the
+namespace's generated `GetTypes()` call (see below).
+
 ### Member accessibility
 
 Members are inert declarations read by the generator at compile time:
@@ -95,8 +104,11 @@ Members are inert declarations read by the generator at compile time:
   must be declared `internal`; their initializer expression becomes the generated value.
 
 The analyzer reports `TLB0008` for invalid accessibility and `TLB0009` when a value member has no
-initializer. The generator also emits a small partial of the spec class that references the marker
-fields, so the compiler's unused-member analysis does not flag them.
+initializer; both are fixable (`Make private`/`Make internal` for `TLB0008`). Marker members without an
+explicit `= default` initializer are flagged by `TLB0010` (with an `Add '= default'` fix). The generator
+also emits a small partial of the spec class that references the marker fields, so the compiler's
+unused-member analysis does not flag them — the spec must therefore be declared `partial`
+(`TLB0011`, with a `Make partial` fix).
 
 ### Value members (composed references)
 
@@ -125,11 +137,11 @@ local `TypeLibrary` names.
 
 ### Including types in `GetTypes()`
 
-Mark a member with `IncludeInGetTypes = true` to include it in its namespace's generated `GetTypes()`
+Mark a member with `includeInGetTypes: true` to include it in its namespace's generated `GetTypes()`
 method, which returns an `ImmutableArray<TypeReference>` of the included members:
 
 ```csharp
-[TypeRef("ILogger", "Microsoft.Extensions.Logging", IncludeInGetTypes = true)]
+[TypeRef("ILogger", "Microsoft.Extensions.Logging", includeInGetTypes: true)]
 static readonly TypeIdentity ILogger = default;
 ```
 
@@ -158,7 +170,10 @@ Set the MSBuild property `DisablePurviewTypeLibraryGenerator` to `true` to disab
 
 ## Validation
 
-`TypeLibraryValidationAnalyzer` reports `TLB0001`–`TLB0006`, `TLB0008`–`TLB0009` for invalid specs
+`TypeLibraryValidationAnalyzer` reports `TLB0001`–`TLB0013` for invalid specs
 (non-static class, member type that is not `TypeIdentity`/`TypeReference`, unresolvable type/namespace,
-duplicate members, invalid class name, invalid namespace, invalid member accessibility, and value
-members without an initializer). Specs that carry a blocking error are skipped by the generator.
+duplicate members, invalid class name, invalid namespace, invalid member accessibility, value members
+without an initializer, marker members without an explicit `= default`, a spec that is not declared
+`partial`, and a spec class whose name collides with the generated type library class — `TLB0012` when
+they share a namespace, `TLB0013` when they do not). `TLB0002`, `TLB0008`, `TLB0010`, `TLB0011`,
+`TLB0012`, and `TLB0013` have code fixes. Specs that carry a blocking error are skipped by the generator.

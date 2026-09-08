@@ -489,6 +489,28 @@ partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty class declaration using the minimal identifying properties, terminated with a
+	/// semicolon instead of a body.
+	/// </summary>
+	/// <param name="name">The class name.</param>
+	/// <param name="accessibility">The optional accessibility.</param>
+	/// <param name="configure">An optional callback that configures the declaration.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Class("C"); // public sealed partial class C;</code></example>
+	public CodeWriter Class(
+		string name,
+		TypeDeclarationAccessibility? accessibility = null,
+		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
+	)
+	{
+		var declaration = new TypeDeclarationOptions(name, accessibility);
+		if (configure is not null)
+			declaration = configure(declaration);
+
+		return Class(declaration);
+	}
+
+	/// <summary>
 	/// Writes a class declaration using the minimal identifying properties and invokes a callback for
 	/// its body.
 	/// </summary>
@@ -534,6 +556,28 @@ partial class CodeWriter
 			declaration = configure(declaration);
 
 		return StructScope(declaration);
+	}
+
+	/// <summary>
+	/// Writes an empty struct declaration using the minimal identifying properties, terminated with a
+	/// semicolon instead of a body.
+	/// </summary>
+	/// <param name="name">The struct name.</param>
+	/// <param name="accessibility">The optional accessibility.</param>
+	/// <param name="configure">An optional callback that configures the declaration.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Struct("Value"); // public sealed partial struct Value;</code></example>
+	public CodeWriter Struct(
+		string name,
+		TypeDeclarationAccessibility? accessibility = null,
+		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
+	)
+	{
+		var declaration = new TypeDeclarationOptions(name, accessibility);
+		if (configure is not null)
+			declaration = configure(declaration);
+
+		return Struct(declaration);
 	}
 
 	/// <summary>
@@ -586,6 +630,28 @@ partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty record class declaration using the minimal identifying properties, terminated with a
+	/// semicolon instead of a body.
+	/// </summary>
+	/// <param name="name">The record class name.</param>
+	/// <param name="accessibility">The optional accessibility.</param>
+	/// <param name="configure">An optional callback that configures the declaration.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.RecordClass("Model"); // public sealed partial record Model;</code></example>
+	public CodeWriter RecordClass(
+		string name,
+		TypeDeclarationAccessibility? accessibility = null,
+		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
+	)
+	{
+		var declaration = new TypeDeclarationOptions(name, accessibility);
+		if (configure is not null)
+			declaration = configure(declaration);
+
+		return RecordClass(declaration);
+	}
+
+	/// <summary>
 	/// Writes a record class declaration using the minimal identifying properties and invokes a callback
 	/// for its body.
 	/// </summary>
@@ -635,6 +701,28 @@ partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty record struct declaration using the minimal identifying properties, terminated with a
+	/// semicolon instead of a body.
+	/// </summary>
+	/// <param name="name">The record struct name.</param>
+	/// <param name="accessibility">The optional accessibility.</param>
+	/// <param name="configure">An optional callback that configures the declaration.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.RecordStruct("Value"); // public readonly partial record struct Value;</code></example>
+	public CodeWriter RecordStruct(
+		string name,
+		TypeDeclarationAccessibility? accessibility = null,
+		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
+	)
+	{
+		var declaration = new TypeDeclarationOptions(name, accessibility);
+		if (configure is not null)
+			declaration = configure(declaration);
+
+		return RecordStruct(declaration);
+	}
+
+	/// <summary>
 	/// Writes a record struct declaration using the minimal identifying properties and invokes a callback
 	/// for its body.
 	/// </summary>
@@ -681,6 +769,28 @@ partial class CodeWriter
 			declaration = configure(declaration);
 
 		return InterfaceScope(declaration);
+	}
+
+	/// <summary>
+	/// Writes an empty interface declaration using the minimal identifying properties, terminated with a
+	/// semicolon instead of a body.
+	/// </summary>
+	/// <param name="name">The interface name.</param>
+	/// <param name="accessibility">The optional accessibility.</param>
+	/// <param name="configure">An optional callback that configures the declaration.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Interface("IService"); // public partial interface IService;</code></example>
+	public CodeWriter Interface(
+		string name,
+		TypeDeclarationAccessibility? accessibility = null,
+		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
+	)
+	{
+		var declaration = new TypeDeclarationOptions(name, accessibility);
+		if (configure is not null)
+			declaration = configure(declaration);
+
+		return Interface(declaration);
 	}
 
 	/// <summary>
@@ -905,7 +1015,8 @@ partial class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes a field in an enum declaration using the minimal identifying properties.
+	/// Writes a field in an enum declaration using the minimal identifying properties. Consecutive
+	/// fields are separated by a blank line, so XML summaries remain readable.
 	/// </summary>
 	/// <param name="fieldName">The enum field name.</param>
 	/// <param name="fieldValue">

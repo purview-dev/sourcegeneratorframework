@@ -298,4 +298,157 @@ public sealed class TypeLibraryValidationAnalyzerTests : TUnitDiagnosticAnalyzer
 		await Assert.That(result).HasDiagnostics(1);
 		await Assert.That(result).HasDiagnostic(TypeLibraryValidationAnalyzer.InvalidNamespace.Id);
 	}
+
+	[Test]
+	public async Task Generate_MarkerWithoutInitializer_ReportsMarkerMissingDefaultInitializer(
+		CancellationToken cancellationToken
+	)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				[GenerateTypeLibrary]
+				static partial class TypeLibraryModel
+				{
+					[TypeRef("Test")]
+					static readonly TypeIdentity MyAttribute;
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasDiagnostics(1);
+		await Assert.That(result).HasDiagnostic(TypeLibraryValidationAnalyzer.MarkerMissingDefaultInitializer.Id);
+	}
+
+	[Test]
+	public async Task Generate_MarkerWithDefaultInitializer_DoesNotReportMarkerMissingDefaultInitializer(
+		CancellationToken cancellationToken
+	)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				[GenerateTypeLibrary]
+				static partial class TypeLibraryModel
+				{
+					[TypeRef("Test")]
+					static readonly TypeIdentity MyAttribute = default;
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasNoDiagnostics();
+	}
+
+	[Test]
+	public async Task Generate_NonPartialSpec_ReportsSpecMustBePartial(CancellationToken cancellationToken)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				[GenerateTypeLibrary]
+				static class TypeLibraryModel
+				{
+					[TypeRef("MyAttribute", Namespace = "Test")]
+					static readonly TypeIdentity MyAttribute = default!;
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasDiagnostics(1);
+		await Assert.That(result).HasDiagnostic(TypeLibraryValidationAnalyzer.SpecMustBePartial.Id);
+	}
+
+	[Test]
+	public async Task Generate_PartialSpec_DoesNotReportSpecMustBePartial(CancellationToken cancellationToken)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				[GenerateTypeLibrary]
+				static partial class TypeLibraryModel
+				{
+					[TypeRef("MyAttribute", Namespace = "Test")]
+					static readonly TypeIdentity MyAttribute = default!;
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasNoDiagnostics();
+	}
+
+	[Test]
+	public async Task Generate_SpecNameClashesWithGeneratedClass_SameNamespace_ReportsClash(
+		CancellationToken cancellationToken
+	)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				namespace Test
+				{
+					[GenerateTypeLibrary(ClassName = "TypeLibrary", Namespace = "Test")]
+					static partial class TypeLibrary
+					{
+						[TypeRef("Test")]
+						static readonly TypeIdentity MyAttribute = default!;
+					}
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasDiagnostics(1);
+		await Assert
+			.That(result)
+			.HasDiagnostic(TypeLibraryValidationAnalyzer.SpecClassNameClashesWithGeneratedClass.Id);
+	}
+
+	[Test]
+	public async Task Generate_SpecNameClashesWithGeneratedClass_DifferentNamespace_ReportsCollision(
+		CancellationToken cancellationToken
+	)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				namespace Spec
+				{
+					[GenerateTypeLibrary(ClassName = "TypeLibrary", Namespace = "Generated")]
+					static partial class TypeLibrary
+					{
+						[TypeRef("Test")]
+						static readonly TypeIdentity MyAttribute = default!;
+					}
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasDiagnostics(1);
+		await Assert.That(result).HasDiagnostic(TypeLibraryValidationAnalyzer.SpecClassNameCollidesAcrossNamespaces.Id);
+	}
+
+	[Test]
+	public async Task Generate_DistinctSpecName_DoesNotReportClassNameClash(CancellationToken cancellationToken)
+	{
+		var source =
+			AttributeDefinition
+			+ """
+				[GenerateTypeLibrary(ClassName = "TypeLibrary")]
+				static partial class TypeLibraryModel
+				{
+					[TypeRef("Test")]
+					static readonly TypeIdentity MyAttribute = default!;
+				}
+				""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasNoDiagnostics();
+	}
 }

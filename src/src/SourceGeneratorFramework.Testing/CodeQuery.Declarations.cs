@@ -51,7 +51,21 @@ public sealed partial class CodeQuery
 	/// Gets a type declaration (class, struct, interface, record, enum or delegate) by name.
 	/// </summary>
 	public CodeQueryResult<MemberDeclarationSyntax> GetTypeDeclaration(string name, string? @namespace = null) =>
-		Get<MemberDeclarationSyntax>(node => IsTypeDeclarationMatch(node, name) && NamespaceMatches(node, @namespace));
+		GetTypeDeclaration(name, null, @namespace);
+
+	/// <summary>
+	/// Gets a type declaration (class, struct, interface, record, enum or delegate) by name and generic arity.
+	/// </summary>
+	public CodeQueryResult<MemberDeclarationSyntax> GetTypeDeclaration(
+		string name,
+		int arity,
+		string? @namespace = null
+	) => GetTypeDeclaration(name, (int?)arity, @namespace);
+
+	CodeQueryResult<MemberDeclarationSyntax> GetTypeDeclaration(string name, int? arity, string? @namespace) =>
+		Get<MemberDeclarationSyntax>(node =>
+			IsTypeDeclarationMatch(node, name, arity) && NamespaceMatches(node, @namespace)
+		);
 
 	/// <summary>
 	/// Gets a type declaration (class, struct, interface, record, enum or delegate) by type identity.
@@ -61,15 +75,26 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return GetTypeDeclaration(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return GetTypeDeclaration(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
 	/// Determines whether a type declaration with the given name exists.
 	/// </summary>
 	public bool HasTypeDeclaration(string name, string? @namespace = null) =>
-		Has<MemberDeclarationSyntax>(node => IsTypeDeclarationMatch(node, name) && NamespaceMatches(node, @namespace));
+		HasTypeDeclaration(name, null, @namespace);
+
+	/// <summary>
+	/// Determines whether a type declaration with the given name and generic arity exists.
+	/// </summary>
+	public bool HasTypeDeclaration(string name, int arity, string? @namespace = null) =>
+		HasTypeDeclaration(name, (int?)arity, @namespace);
+
+	bool HasTypeDeclaration(string name, int? arity, string? @namespace) =>
+		Has<MemberDeclarationSyntax>(node =>
+			IsTypeDeclarationMatch(node, name, arity) && NamespaceMatches(node, @namespace)
+		);
 
 	/// <summary>
 	/// Determines whether a type declaration with the given type identity exists.
@@ -79,8 +104,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return HasTypeDeclaration(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return HasTypeDeclaration(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -88,6 +113,12 @@ public sealed partial class CodeQuery
 	/// </summary>
 	public CodeQueryResult<ClassDeclarationSyntax> GetClass(string name, string? @namespace = null) =>
 		FindByName<ClassDeclarationSyntax>(name, @namespace);
+
+	/// <summary>
+	/// Gets a class declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	public CodeQueryResult<ClassDeclarationSyntax> GetClass(string name, int arity, string? @namespace = null) =>
+		FindByName<ClassDeclarationSyntax>(name, @namespace, null, arity);
 
 	/// <summary>
 	/// Gets a class declaration by type identity, within the namespace of its identity.
@@ -98,13 +129,20 @@ public sealed partial class CodeQuery
 			throw new ArgumentNullException(nameof(type));
 
 		//
-		return GetClass(type.Identity.Name, type.Identity.Namespace);
+		return GetClass(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
 	/// Determines whether a class declaration with the given name exists, optionally within a namespace.
 	/// </summary>
 	public bool HasClass(string name, string? @namespace = null) => HasByName<ClassDeclarationSyntax>(name, @namespace);
+
+	/// <summary>
+	/// Determines whether a class declaration with the given name and generic arity exists, optionally within
+	/// a namespace.
+	/// </summary>
+	public bool HasClass(string name, int arity, string? @namespace = null) =>
+		HasByName<ClassDeclarationSyntax>(name, @namespace, null, arity);
 
 	/// <summary>
 	/// Determines whether a class declaration with the given type identity exists.
@@ -114,8 +152,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return HasClass(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return HasClass(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -126,6 +164,17 @@ public sealed partial class CodeQuery
 		TryFindByName(name, out declaration, @namespace);
 
 	/// <summary>
+	/// Attempts to get a class declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
+	public bool TryGetClass(
+		string name,
+		int arity,
+		out ClassDeclarationSyntax? declaration,
+		string? @namespace = null
+	) => TryFindByName(name, out declaration, @namespace, null, arity);
+
+	/// <summary>
 	/// Attempts to get a class declaration by type identity.
 	/// </summary>
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
@@ -134,8 +183,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return TryGetClass(type.Identity.Name, out declaration, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return TryGetClass(type.Identity.Name, type.Identity.GenericArity, out declaration, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -145,6 +194,12 @@ public sealed partial class CodeQuery
 		FindByName<StructDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Gets a struct declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	public CodeQueryResult<StructDeclarationSyntax> GetStruct(string name, int arity, string? @namespace = null) =>
+		FindByName<StructDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Gets a struct declaration by type identity, within the namespace of its identity.
 	/// </summary>
 	public CodeQueryResult<StructDeclarationSyntax> GetStruct(TypeReference type)
@@ -152,8 +207,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return GetStruct(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return GetStruct(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -163,6 +218,13 @@ public sealed partial class CodeQuery
 		HasByName<StructDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Determines whether a struct declaration with the given name and generic arity exists, optionally within
+	/// a namespace.
+	/// </summary>
+	public bool HasStruct(string name, int arity, string? @namespace = null) =>
+		HasByName<StructDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Determines whether a struct declaration with the given type identity exists.
 	/// </summary>
 	public bool HasStruct(TypeReference type)
@@ -170,8 +232,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return HasStruct(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return HasStruct(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -181,6 +243,15 @@ public sealed partial class CodeQuery
 		FindByName<InterfaceDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Gets an interface declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	public CodeQueryResult<InterfaceDeclarationSyntax> GetInterface(
+		string name,
+		int arity,
+		string? @namespace = null
+	) => FindByName<InterfaceDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Gets an interface declaration by type identity, within the namespace of its identity.
 	/// </summary>
 	public CodeQueryResult<InterfaceDeclarationSyntax> GetInterface(TypeReference type)
@@ -188,8 +259,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return GetInterface(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return GetInterface(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -199,6 +270,13 @@ public sealed partial class CodeQuery
 		HasByName<InterfaceDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Determines whether an interface declaration with the given name and generic arity exists, optionally
+	/// within a namespace.
+	/// </summary>
+	public bool HasInterface(string name, int arity, string? @namespace = null) =>
+		HasByName<InterfaceDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Determines whether an interface declaration with the given type identity exists.
 	/// </summary>
 	public bool HasInterface(TypeReference type)
@@ -206,8 +284,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return HasInterface(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return HasInterface(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -217,6 +295,12 @@ public sealed partial class CodeQuery
 		FindByName<EnumDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Gets an enum declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	public CodeQueryResult<EnumDeclarationSyntax> GetEnum(string name, int arity, string? @namespace = null) =>
+		FindByName<EnumDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Gets an enum declaration by type identity, within the namespace of its identity.
 	/// </summary>
 	public CodeQueryResult<EnumDeclarationSyntax> GetEnum(TypeReference type)
@@ -224,14 +308,21 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return GetEnum(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return GetEnum(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
 	/// Determines whether an enum declaration with the given name exists, optionally within a namespace.
 	/// </summary>
 	public bool HasEnum(string name, string? @namespace = null) => HasByName<EnumDeclarationSyntax>(name, @namespace);
+
+	/// <summary>
+	/// Determines whether an enum declaration with the given name and generic arity exists, optionally within
+	/// a namespace.
+	/// </summary>
+	public bool HasEnum(string name, int arity, string? @namespace = null) =>
+		HasByName<EnumDeclarationSyntax>(name, @namespace, null, arity);
 
 	/// <summary>
 	/// Determines whether an enum declaration with the given type identity exists.
@@ -242,7 +333,7 @@ public sealed partial class CodeQuery
 			throw new ArgumentNullException(nameof(type));
 
 		//
-		return HasEnum(type.Identity.Name, type.Identity.Namespace);
+		return HasEnum(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -252,6 +343,12 @@ public sealed partial class CodeQuery
 		FindByName<DelegateDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Gets a delegate declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	public CodeQueryResult<DelegateDeclarationSyntax> GetDelegate(string name, int arity, string? @namespace = null) =>
+		FindByName<DelegateDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Gets a delegate declaration by type identity, within the namespace of its identity.
 	/// </summary>
 	public CodeQueryResult<DelegateDeclarationSyntax> GetDelegate(TypeReference type)
@@ -259,8 +356,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return GetDelegate(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return GetDelegate(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -270,6 +367,13 @@ public sealed partial class CodeQuery
 		HasByName<DelegateDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Determines whether a delegate declaration with the given name and generic arity exists, optionally
+	/// within a namespace.
+	/// </summary>
+	public bool HasDelegate(string name, int arity, string? @namespace = null) =>
+		HasByName<DelegateDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Determines whether a delegate declaration with the given type identity exists.
 	/// </summary>
 	public bool HasDelegate(TypeReference type)
@@ -277,8 +381,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return HasDelegate(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return HasDelegate(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -288,6 +392,12 @@ public sealed partial class CodeQuery
 		FindByName<RecordDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Gets a record declaration by name and generic arity, optionally within a namespace.
+	/// </summary>
+	public CodeQueryResult<RecordDeclarationSyntax> GetRecord(string name, int arity, string? @namespace = null) =>
+		FindByName<RecordDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Gets a record declaration by type identity, within the namespace of its identity.
 	/// </summary>
 	public CodeQueryResult<RecordDeclarationSyntax> GetRecord(TypeReference type)
@@ -295,8 +405,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return GetRecord(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return GetRecord(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	/// <summary>
@@ -306,6 +416,13 @@ public sealed partial class CodeQuery
 		HasByName<RecordDeclarationSyntax>(name, @namespace);
 
 	/// <summary>
+	/// Determines whether a record declaration with the given name and generic arity exists, optionally within
+	/// a namespace.
+	/// </summary>
+	public bool HasRecord(string name, int arity, string? @namespace = null) =>
+		HasByName<RecordDeclarationSyntax>(name, @namespace, null, arity);
+
+	/// <summary>
 	/// Determines whether a record declaration with the given type identity exists.
 	/// </summary>
 	public bool HasRecord(TypeReference type)
@@ -313,8 +430,8 @@ public sealed partial class CodeQuery
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		// Use the namespace from the type identity to find the declaration.
-		return HasRecord(type.Identity.Name, type.Identity.Namespace);
+		// Use the namespace and arity from the type identity to find the declaration.
+		return HasRecord(type.Identity.Name, type.Identity.GenericArity, type.Identity.Namespace);
 	}
 
 	// ---------------------------------------------------------------------------------------------
@@ -431,18 +548,32 @@ public sealed partial class CodeQuery
 			_ => false,
 		};
 
-	CodeQueryResult<T> FindByName<T>(string name, string? @namespace = null, Func<T, string>? getName = null)
+	static bool IsTypeDeclarationMatch(MemberDeclarationSyntax node, string name, int? arity) =>
+		IsTypeDeclarationMatch(node, name) && DeclaredArityMatches(node, arity);
+
+	CodeQueryResult<T> FindByName<T>(
+		string name,
+		string? @namespace = null,
+		Func<T, string>? getName = null,
+		int? arity = null
+	)
 		where T : SyntaxNode =>
-		TryFindByName(name, out var node, @namespace, getName)
+		TryFindByName(name, out var node, @namespace, getName, arity)
 			? new(this, node!)
 			: throw new SyntaxNotFoundException(
 				$"No {typeof(T).Name} named '{name}' was found in the {ScopeDescription()}{(string.IsNullOrEmpty(@namespace) ? "" : $" within namespace '{@namespace}'")}."
 			);
 
-	bool HasByName<T>(string name, string? @namespace = null, Func<T, string>? getName = null)
-		where T : SyntaxNode => TryFindByName(name, out _, @namespace, getName);
+	bool HasByName<T>(string name, string? @namespace = null, Func<T, string>? getName = null, int? arity = null)
+		where T : SyntaxNode => TryFindByName(name, out _, @namespace, getName, arity);
 
-	bool TryFindByName<T>(string name, out T? node, string? @namespace = null, Func<T, string>? getName = null)
+	bool TryFindByName<T>(
+		string name,
+		out T? node,
+		string? @namespace = null,
+		Func<T, string>? getName = null,
+		int? arity = null
+	)
 		where T : SyntaxNode
 	{
 		if (string.IsNullOrWhiteSpace(name))
@@ -452,10 +583,32 @@ public sealed partial class CodeQuery
 		return TryFind(
 			name,
 			getName is null ? static candidate => GetIdentifier(candidate) : getName,
-			string.IsNullOrEmpty(@namespace) ? null : candidate => NamespaceMatches(candidate, @namespace),
+			BuildFilter<T>(@namespace, arity),
 			out node
 		);
 	}
+
+	static Func<T, bool>? BuildFilter<T>(string? @namespace, int? arity)
+		where T : SyntaxNode
+	{
+		Func<T, bool>? namespaceFilter = null;
+		if (!string.IsNullOrEmpty(@namespace))
+			namespaceFilter = candidate => NamespaceMatches(candidate, @namespace);
+
+		Func<T, bool>? arityFilter = null;
+		if (arity is not null)
+			arityFilter = candidate => DeclaredArityMatches(candidate, arity);
+
+		if (namespaceFilter is not null && arityFilter is not null)
+			return candidate => namespaceFilter(candidate) && arityFilter(candidate);
+
+		// If only one filter is provided, return it; otherwise, return null (no filter).
+		return namespaceFilter ?? arityFilter;
+	}
+
+	static bool DeclaredArityMatches(SyntaxNode node, int? arity) =>
+		arity is null
+		|| (TypeSyntaxFacts.TryGetDeclarationName(node, out _, out var declaredArity) && declaredArity == arity);
 
 	static bool NamespaceMatches(SyntaxNode node, string? @namespace) =>
 		string.IsNullOrEmpty(@namespace)

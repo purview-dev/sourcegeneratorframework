@@ -24,92 +24,97 @@ public static partial class PurviewTypeLibrary
 		public const string Namespace = "System";
 
 		/// <summary>
-		/// <see cref="Attribute"/>.
+		/// <see cref="global::System.Attribute"/>.
 		/// </summary>
 		public static readonly TypeIdentity Attribute = TypeIdentity.Create<Attribute>();
 
 		/// <summary>
-		/// <see cref="Type"/>.
+		/// <see cref="global::System.Array"/>.
+		/// </summary>
+		public static readonly TypeIdentity Array = TypeIdentity.Create<Array>();
+
+		/// <summary>
+		/// <see cref="global::System.Type"/>.
 		/// </summary>
 		public static readonly TypeIdentity Type = TypeIdentity.Create<Type>();
 
 		/// <summary>
-		/// <see cref="bool"/>.
+		/// <see langword="bool"/>.
 		/// </summary>
 		public static readonly TypeIdentity Boolean = TypeIdentity.Create<bool>();
 
 		/// <summary>
-		/// <see cref="byte"/>.
+		/// <see langword="byte"/>.
 		/// </summary>
 		public static readonly TypeIdentity Byte = TypeIdentity.Create<byte>();
 
 		/// <summary>
-		/// <see cref="sbyte"/>.
+		/// <see langword="sbyte"/>.
 		/// </summary>
 		public static readonly TypeIdentity SByte = TypeIdentity.Create<sbyte>();
 
 		/// <summary>
-		/// <see cref="char"/>.
+		/// <see langword="char"/>.
 		/// </summary>
 		public static readonly TypeIdentity Char = TypeIdentity.Create<char>();
 
 		/// <summary>
-		/// <see cref="decimal"/>.
+		/// <see langword="decimal"/>.
 		/// </summary>
 		public static readonly TypeIdentity Decimal = TypeIdentity.Create<decimal>();
 
 		/// <summary>
-		/// <see cref="double"/>.
+		/// <see langword="double"/>.
 		/// </summary>
 		public static readonly TypeIdentity Double = TypeIdentity.Create<double>();
 
 		/// <summary>
-		/// <see cref="float"/>.
+		/// <see langword="float"/>.
 		/// </summary>
 		public static readonly TypeIdentity Float = TypeIdentity.Create<float>();
 
 		/// <summary>
-		/// <see cref="int"/>.
+		/// <see langword="int"/>.
 		/// </summary>
 		public static readonly TypeIdentity Int32 = TypeIdentity.Create<int>();
 
 		/// <summary>
-		/// <see cref="uint"/>.
+		/// <see langword="uint"/>.
 		/// </summary>
 		public static readonly TypeIdentity UInt32 = TypeIdentity.Create<uint>();
 
 		/// <summary>
-		/// <see cref="long"/>.
+		/// <see langword="long"/>.
 		/// </summary>
 		public static readonly TypeIdentity Int64 = TypeIdentity.Create<long>();
 
 		/// <summary>
-		/// <see cref="ulong"/>.
+		/// <see langword="ulong"/>.
 		/// </summary>
 		public static readonly TypeIdentity UInt64 = TypeIdentity.Create<ulong>();
 
 		/// <summary>
-		/// <see cref="short"/>.
+		/// <see langword="short"/>.
 		/// </summary>
 		public static readonly TypeIdentity Int16 = TypeIdentity.Create<short>();
 
 		/// <summary>
-		/// <see cref="ushort"/>.
+		/// <see langword="ushort"/>.
 		/// </summary>
 		public static readonly TypeIdentity UInt16 = TypeIdentity.Create<ushort>();
 
 		/// <summary>
-		/// <see cref="string"/>.
+		/// <see langword="string"/>.
 		/// </summary>
 		public static readonly TypeIdentity String = TypeIdentity.Create<string>();
 
 		/// <summary>
-		/// <see cref="object"/>.
+		/// <see langword="object"/>.
 		/// </summary>
 		public static readonly TypeIdentity Object = TypeIdentity.Create<object>();
 
 		/// <summary>
-		/// <see cref="void"/>.
+		/// <see langword="void"/>.
 		/// </summary>
 		public static readonly TypeIdentity Void = new("void", null);
 
@@ -119,17 +124,17 @@ public static partial class PurviewTypeLibrary
 		/// <remarks>
 		/// Renders as <c>null</c> and converts to the <c>"null"</c> expression where a string value is
 		/// expected, such as an initializer, default value, argument or return value. It is not a type and
-		/// is rejected in type positions.
+		/// is rejected in type positions. <see langword="null"/>.
 		/// </remarks>
 		public static readonly TypeIdentity Null = TypeIdentity.Null;
 
 		/// <summary>
-		/// <see cref="nint"/>.
+		/// <see langword="nint"/>.
 		/// </summary>
 		public static readonly TypeIdentity IntPtr = TypeIdentity.Create<nint>();
 
 		/// <summary>
-		/// <see cref="nuint"/>.
+		/// <see langword="nuint"/>.
 		/// </summary>
 		public static readonly TypeIdentity UIntPtr = TypeIdentity.Create<nuint>();
 
@@ -151,6 +156,28 @@ public static partial class PurviewTypeLibrary
 		public static readonly TypeIdentity Exception = TypeIdentity.Create<Exception>();
 
 		/// <summary>
+		/// <see cref="global::System.ArgumentNullException"/>.
+		/// </summary>
+		public static readonly TypeIdentity ArgumentNullException = TypeIdentity.Create<ArgumentNullException>();
+
+		/// <summary>
+		/// <see cref="global::System.ArgumentOutOfRangeException"/>.
+		/// </summary>
+		public static readonly TypeIdentity ArgumentOutOfRangeException =
+			TypeIdentity.Create<ArgumentOutOfRangeException>();
+
+		/// <summary>
+		/// <see cref="global::System.ArgumentException"/>.
+		/// </summary>
+		public static readonly TypeIdentity ArgumentException = TypeIdentity.Create<ArgumentException>();
+
+		/// <summary>
+		/// <see cref="global::System.InvalidOperationException"/>.
+		/// </summary>
+		public static readonly TypeIdentity InvalidOperationException =
+			TypeIdentity.Create<InvalidOperationException>();
+
+		/// <summary>
 		/// <see cref="global::System.IDisposable"/>.
 		/// </summary>
 		public static readonly TypeIdentity IDisposable = TypeIdentity.Create<IDisposable>();
@@ -161,17 +188,17 @@ public static partial class PurviewTypeLibrary
 		public static readonly TypeIdentity IAsyncDisposable = new(nameof(IAsyncDisposable), "System");
 
 		/// <summary>
-		/// <see cref="DateTimeOffset"/>.
+		/// <see cref="global::System.DateTimeOffset"/>.
 		/// </summary>
 		public static readonly TypeIdentity DateTimeOffset = TypeIdentity.Create<DateTimeOffset>();
 
 		/// <summary>
-		/// <see cref="DateTime"/>.
+		/// <see cref="global::System.DateTime"/>.
 		/// </summary>
 		public static readonly TypeIdentity DateTime = TypeIdentity.Create<DateTime>();
 
 		/// <summary>
-		/// <see cref="TimeSpan"/>.
+		/// <see cref="global::System.TimeSpan"/>.
 		/// </summary>
 		public static readonly TypeIdentity TimeSpan = TypeIdentity.Create<TimeSpan>();
 
@@ -186,6 +213,83 @@ public static partial class PurviewTypeLibrary
 		public static readonly TypeIdentity TimeOnly = new(nameof(TimeOnly), "System");
 
 		/// <summary>
+		/// The <c>System.Threading</c> namespace.
+		/// </summary>
+		public static class Threading
+		{
+			/// <summary>
+			/// The <c>System.Threading</c> namespace.
+			/// </summary>
+			public const string Namespace = "System.Threading";
+
+			/// <summary>
+			/// <see cref="global::System.Threading.CancellationToken"/>.
+			/// </summary>
+			public static class Tasks
+			{
+				/// <summary>
+				/// The <c>System.Threading.Tasks</c> namespace.
+				/// </summary>
+				public const string Namespace = "System.Threading.Tasks";
+
+				/// <summary>
+				/// <see cref="global::System.Threading.CancellationToken"/>.
+				/// </summary>
+				public static readonly TypeIdentity CancellationToken = new(typeof(CancellationToken));
+
+				/// <summary>
+				///	<see cref="global::System.Threading.Tasks.ValueTask"/>.
+				/// </summary>
+				public static readonly TypeIdentity ValueTask = new(typeof(ValueTask));
+
+				/// <summary>
+				/// <see cref="global::System.Threading.Tasks.Task"/>.
+				/// </summary>
+				public static readonly TypeIdentity Task = new(typeof(Task));
+			}
+		}
+
+		/// <summary>
+		/// The <c>System.Globalization</c> namespace.
+		/// </summary>
+		public static partial class Globalization
+		{
+			/// <summary>
+			/// The <c>System.Globalization</c> namespace.
+			/// </summary>
+			public const string Namespace = "System.Globalization";
+
+			/// <summary>
+			/// <see cref="global::System.Globalization.CultureInfo"/>.
+			/// </summary>
+			public static readonly TypeIdentity CultureInfo =
+				TypeIdentity.Create<global::System.Globalization.CultureInfo>();
+
+			/// <summary>
+			/// <see cref="global::System.Globalization.CultureNotFoundException"/>.
+			/// </summary>
+			public static readonly TypeIdentity NumberStyles =
+				TypeIdentity.Create<global::System.Globalization.NumberStyles>();
+
+			/// <summary>
+			/// <see cref="global::System.Globalization.DateTimeStyles"/>.
+			/// </summary>
+			public static readonly TypeIdentity TextInfo = TypeIdentity.Create<global::System.Globalization.TextInfo>();
+
+			/// <summary>
+			/// <see cref="global::System.Globalization.DateTimeFormatInfo"/>.
+			/// </summary>
+			public static readonly TypeIdentity DateTimeFormatInfo =
+				TypeIdentity.Create<global::System.Globalization.DateTimeFormatInfo>();
+
+			/// <summary>
+			/// <see cref="global::System.Globalization.NumberFormatInfo"/>.
+			/// </summary>
+			public static readonly TypeIdentity NumberFormatInfo =
+				TypeIdentity.Create<global::System.Globalization.NumberFormatInfo>();
+		}
+
+		/// <summary>
 		/// The <c>System.Collections</c> namespace.
 		/// </summary>
 		public static partial class Collections
@@ -196,10 +300,63 @@ public static partial class PurviewTypeLibrary
 			public const string Namespace = "System.Collections";
 
 			/// <summary>
+			/// <see cref="global::System.Collections.IEnumerable"/>.
+			/// </summary>
+			public static readonly TypeIdentity IEnumerable =
+				TypeIdentity.Create<global::System.Collections.IEnumerable>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.IEnumerator"/>.
+			/// </summary>
+			public static readonly TypeIdentity IDictionary =
+				TypeIdentity.Create<global::System.Collections.IDictionary>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.ICollection"/>.
+			/// </summary>
+			public static readonly TypeIdentity ICollection =
+				TypeIdentity.Create<global::System.Collections.ICollection>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.IList"/>.
+			/// </summary>
+			public static readonly TypeIdentity IList = TypeIdentity.Create<global::System.Collections.IList>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.ArrayList"/>.
+			/// </summary>
+			public static readonly TypeIdentity ArrayList = TypeIdentity.Create<global::System.Collections.ArrayList>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.SortedList"/>.
+			/// </summary>
+			public static readonly TypeIdentity SortedList =
+				TypeIdentity.Create<global::System.Collections.SortedList>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.Queue"/>.
+			/// </summary>
+			public static readonly TypeIdentity Queue = TypeIdentity.Create<global::System.Collections.Queue>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.ReadOnlyCollectionBase"/>.
+			/// </summary>
+			public static readonly TypeIdentity ReadOnlyCollectionBase =
+				TypeIdentity.Create<global::System.Collections.ReadOnlyCollectionBase>();
+
+			/// <summary>
+			/// <see cref="global::System.Collections.Stack"/>.
+			/// </summary>
+			public static readonly TypeIdentity Stack = TypeIdentity.Create<global::System.Collections.Stack>();
+
+			/// <summary>
 			///  The <c>System.Collections.Generic</c> namespace.
 			/// </summary>
 			public static partial class Generic
 			{
+				/// <summary>
+				/// The <c>System.Collections.Generic</c> namespace.
+				/// </summary>
 				public const string Namespace = "System.Collections.Generic";
 
 				/// <summary>
@@ -309,6 +466,9 @@ public static partial class PurviewTypeLibrary
 			/// </summary>
 			public static partial class Concurrent
 			{
+				/// <summary>
+				/// The <c>System.Collections.Concurrent</c> namespace.
+				/// </summary>
 				public const string Namespace = "System.Collections.Concurrent";
 
 				/// <summary>
@@ -487,6 +647,31 @@ public static partial class PurviewTypeLibrary
 					typeof(ImmutableSortedSet<>.Builder)
 				);
 			}
+
+			/// <summary>
+			/// The <c>System.Collections.Frozen</c> namespace.
+			/// </summary>
+			public static partial class Frozen
+			{
+				/// <summary>
+				/// The <c>System.Collections.Frozen</c> namespace.
+				/// </summary>
+				public const string Namespace = "System.Collections.Frozen";
+
+				/// <summary>
+				/// <see cref="global::System.Collections.Frozen.FrozenSet{T}"/>.
+				/// </summary>
+				public static readonly TypeIdentity FrozenSet = new(
+					typeof(global::System.Collections.Frozen.FrozenSet<>)
+				);
+
+				/// <summary>
+				/// <see cref="global::System.Collections.Frozen.FrozenDictionary{TKey, TValue}"/>.
+				/// </summary>
+				public static readonly TypeIdentity FrozenDictionary = new(
+					typeof(global::System.Collections.Frozen.FrozenDictionary<,>)
+				);
+			}
 		}
 
 		/// <summary>
@@ -504,6 +689,9 @@ public static partial class PurviewTypeLibrary
 			/// </summary>
 			public static partial class CodeAnalysis
 			{
+				/// <summary>
+				/// The <c>System.Diagnostics.CodeAnalysis</c> namespace.
+				/// </summary>
 				public const string Namespace = "System.Diagnostics.CodeAnalysis";
 
 				/// <summary>
@@ -539,6 +727,9 @@ public static partial class PurviewTypeLibrary
 			/// </summary>
 			public static partial class CompilerServices
 			{
+				/// <summary>
+				/// The <c>System.Runtime.CompilerServices</c> namespace.
+				/// </summary>
 				public const string Namespace = "System.Runtime.CompilerServices";
 
 				/// <summary>
@@ -566,6 +757,9 @@ public static partial class PurviewTypeLibrary
 			/// </summary>
 			public static partial class Compiler
 			{
+				/// <summary>
+				/// The <c>System.CodeDom.Compiler</c> namespace.
+				/// </summary>
 				public const string Namespace = "System.CodeDom.Compiler";
 
 				/// <summary>
@@ -620,16 +814,30 @@ public static partial class PurviewTypeLibrary
 			/// </summary>
 			public static class DependencyInjection
 			{
+				/// <summary>
+				/// The <c>Microsoft.Extensions.DependencyInjection</c> namespace.
+				/// </summary>
 				public const string DependencyInjectionNamespace = "Microsoft.Extensions.DependencyInjection";
 
+				/// <summary>
+				/// <c>Microsoft.Extensions.DependencyInjection.IServiceCollection</c>
+				/// </summary>
 				public static readonly TypeIdentity IServiceCollection = new(
 					nameof(IServiceCollection),
 					DependencyInjectionNamespace
 				);
+
+				/// <summary>
+				/// <c>Microsoft.Extensions.DependencyInjection.ServiceDescriptor</c>
+				/// </summary>
 				public static readonly TypeIdentity ServiceDescriptor = new(
 					nameof(ServiceDescriptor),
 					DependencyInjectionNamespace
 				);
+
+				/// <summary>
+				/// <c>Microsoft.Extensions.DependencyInjection.ServiceLifetime</c>
+				/// </summary>
 				public static readonly TypeIdentity ServiceLifetime = new(
 					nameof(ServiceLifetime),
 					DependencyInjectionNamespace

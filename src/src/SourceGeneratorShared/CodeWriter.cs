@@ -1455,8 +1455,10 @@ public sealed partial class CodeWriter
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
+
 		using (BlockNamespaceScope(namespaceName))
 			bodyWriter(this);
+
 		return this;
 	}
 
@@ -1512,6 +1514,17 @@ public sealed partial class CodeWriter
 
 		return this;
 	}
+
+	/// <summary>
+	/// Writes an empty class declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The class declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Class(new TypeDeclarationOptions("C")); // public sealed partial class C;</code></example>
+	public CodeWriter Class(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.Class });
 
 	/// <summary>
 	/// Writes an attribute class with an <see cref="AttributeUsageAttribute"/> declaration.
@@ -1611,6 +1624,17 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty struct declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The struct declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Struct(new TypeDeclarationOptions("Value")); // public sealed partial struct Value;</code></example>
+	public CodeWriter Struct(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.Struct });
+
+	/// <summary>
 	/// Writes a record class declaration from structured options and returns its body scope.
 	/// </summary>
 	/// <param name="declaration">The record class declaration options.</param>
@@ -1640,6 +1664,17 @@ public sealed partial class CodeWriter
 
 		return this;
 	}
+
+	/// <summary>
+	/// Writes an empty record class declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The record class declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.RecordClass(new TypeDeclarationOptions("Model")); // public sealed partial record Model;</code></example>
+	public CodeWriter RecordClass(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.RecordClass });
 
 	/// <summary>
 	/// Writes a record struct declaration from structured options and returns its body scope.
@@ -1673,6 +1708,17 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty record struct declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The record struct declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.RecordStruct(new TypeDeclarationOptions("Value")); // public readonly partial record struct Value;</code></example>
+	public CodeWriter RecordStruct(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.RecordStruct });
+
+	/// <summary>
 	/// Writes an interface declaration and returns its body scope.
 	/// </summary>
 	/// <example><code>using (writer.InterfaceScope(new TypeDeclarationOptions("IService"))) { }</code></example>
@@ -1695,13 +1741,31 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes an enum declaration and returns its body scope.
+	/// Writes an empty interface declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The interface declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Interface(new TypeDeclarationOptions("IService")); // public partial interface IService;</code></example>
+	public CodeWriter Interface(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.Interface });
+
+	/// <summary>
+	/// Writes an enum declaration and returns its body scope. The enum is emitted with the
+	/// <see cref="Microsoft.CodeAnalysis.EmbeddedAttribute"/> by default.
 	/// </summary>
 	/// <example><code>using (writer.EnumScope(new TypeDeclarationOptions("Status"))) { }</code></example>
 	public BlockScope EnumScope(TypeDeclarationOptions declaration) =>
 		declaration is null
 			? throw new ArgumentNullException(nameof(declaration))
-			: TypeScope(declaration with { Kind = TypeDeclarationKind.Enum });
+			: TypeScope(
+				declaration with
+				{
+					Kind = TypeDeclarationKind.Enum,
+					IncludeEmbeddedAttribute = declaration.IncludeEmbeddedAttribute ?? true,
+				}
+			);
 
 	/// <summary>
 	/// Writes an enum declaration and invokes a callback for its body.
@@ -1745,7 +1809,8 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes a field in an enum declaration.
+	/// Writes a field in an enum declaration. Consecutive fields are separated by a blank line, so
+	/// XML summaries and attributes remain readable.
 	/// </summary>
 	/// <param name="declaration">The enum field declaration options.</param>
 	/// <returns>The current writer.</returns>
@@ -1753,6 +1818,7 @@ public sealed partial class CodeWriter
 	public CodeWriter EnumField(EnumFieldDeclarationOptions declaration)
 	{
 		ValidateEnumFieldDeclaration(declaration);
+		BeginWrittenItem(WrittenItemKind.EnumField);
 		if (!declaration.XmlSummary.IsDefaultOrEmpty)
 			XmlSummary(declaration.XmlSummary);
 		Attributes(declaration.Attributes);
@@ -1765,7 +1831,9 @@ public sealed partial class CodeWriter
 					?? Convert.ToString(declaration.FieldValue, CultureInfo.InvariantCulture)
 			);
 		}
-		return Line(",");
+		Line(",");
+		CompleteWrittenItem(WrittenItemKind.EnumField, _indentLevel);
+		return this;
 	}
 
 	void XmlSummary(ImmutableArray<string> summary)
@@ -1805,6 +1873,48 @@ public sealed partial class CodeWriter
 		if (declaration is null)
 			throw new ArgumentNullException(nameof(declaration));
 
+		if (!WriteTypeDeclarationHeader(declaration))
+			return default;
+
+		NewLine();
+		GenericConstraints(declaration.GenericTypes);
+
+		return OpenBlockScope(WrittenItemKind.Type);
+	}
+
+	/// <summary>
+	/// Writes a structured type declaration with an empty body, terminating it with a semicolon instead of
+	/// opening a block. Produces declarations such as <c>public sealed partial class C;</c> or, with a primary
+	/// constructor, <c>public sealed class C(string value);</c>. Valid for classes, structs, records and
+	/// interfaces; delegates always terminate with a semicolon, and enums require a body.
+	/// </summary>
+	/// <param name="declaration">The structured type declaration options.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter TypeDeclaration(TypeDeclarationOptions declaration)
+	{
+		if (declaration is null)
+			throw new ArgumentNullException(nameof(declaration));
+
+		if (declaration.Kind is TypeDeclarationKind.Enum or TypeDeclarationKind.Delegate)
+			throw new ArgumentException(
+				"Enums and delegates cannot be written as empty semicolon-terminated declarations.",
+				nameof(declaration)
+			);
+
+		if (WriteTypeDeclarationHeader(declaration))
+		{
+			if (HasGenericConstraints(declaration.GenericTypes))
+				NewLine();
+			GenericConstraints(declaration.GenericTypes);
+			Line(";");
+			CompleteWrittenItem(WrittenItemKind.Type, _indentLevel);
+		}
+
+		return this;
+	}
+
+	bool WriteTypeDeclarationHeader(TypeDeclarationOptions declaration)
+	{
 		ValidateTypeDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Type);
 
@@ -1880,13 +1990,10 @@ public sealed partial class CodeWriter
 			MethodGenericConstraints(declaration.GenericTypes);
 			Line(";");
 			CompleteWrittenItem(WrittenItemKind.Type, _indentLevel);
-			return default;
+			return false;
 		}
 
-		NewLine();
-		GenericConstraints(declaration.GenericTypes);
-
-		return OpenBlockScope(WrittenItemKind.Type);
+		return true;
 	}
 
 	/// <summary>
@@ -2062,8 +2169,8 @@ public sealed partial class CodeWriter
 	/// </param>
 	/// <param name="includeEmbeddedAttribute">
 	/// Whether to emit <see cref="Microsoft.CodeAnalysis.EmbeddedAttribute"/>.
-	/// This is intended only for generator-emitted marker attribute types (R11) and must be
-	/// <see langword="false"/> for ordinary generated members.
+	/// This is intended only for generator-emitted marker attribute and enum types (R11) and must
+	/// be <see langword="false"/> for ordinary generated members.
 	/// </param>
 	/// <param name="includeGeneratedCodeAttribute">Whether to emit <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.</param>
 	/// <example><code>writer.GeneratedAttributes(includeCoverageExclusion: true);</code></example>
@@ -4536,6 +4643,11 @@ public sealed partial class CodeWriter
 			throw new ArgumentException("Type name cannot be null or whitespace.", parameterName);
 		if (type.GenericArity < 0)
 			throw new ArgumentException("Generic arity cannot be negative.", parameterName);
+		if (type.GenericArity > 0 && type.TypeArguments.IsDefaultOrEmpty)
+			throw new ArgumentException(
+				$"The open generic type '{type.MetadataName}' cannot be emitted as a type; construct it with MakeGeneric(...) or supply its type arguments.",
+				parameterName
+			);
 		if (
 			!type.TypeArguments.IsDefaultOrEmpty
 			&& (type.GenericArity == 0 || type.TypeArguments.Length != type.GenericArity)

@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Purview.SourceGeneratorFramework.Testing;
@@ -368,6 +369,239 @@ public static class MemberQueryExtensions
 
 		// Delegate to the query's GetAttribute method, passing the node and name.
 		return node.Query.GetAttribute(node.Node, name);
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Nested types
+	// ---------------------------------------------------------------------------------------------
+
+	/// <summary>
+	/// Gets a nested type declaration (class, struct, interface or record) declared directly by the type,
+	/// optionally matching its generic arity.
+	/// </summary>
+	public static CodeQueryResult<TypeDeclarationSyntax> GetNestedType<T>(
+		this CodeQueryResult<T> type,
+		string name,
+		int? arity = null
+	)
+		where T : TypeDeclarationSyntax
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+
+		// If the nested type is not found, throw an exception with a descriptive message.
+		return type.TryGetNestedType(name, out var nested, arity)
+			? new(type.Query, nested!)
+			: throw new SyntaxNotFoundException(
+				$"No nested type named '{name}' was found on '{type.Node.Identifier.ValueText}'."
+			);
+	}
+
+	/// <summary>
+	/// Determines whether the type declares a nested type with the given name, optionally matching its
+	/// generic arity.
+	/// </summary>
+	public static bool HasNestedType<T>(this CodeQueryResult<T> type, string name, int? arity = null)
+		where T : TypeDeclarationSyntax
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+
+		// Use the TryGetNestedType method to check for the nested type without throwing an exception.
+		return type.TryGetNestedType(name, out _, arity);
+	}
+
+	/// <summary>
+	/// Attempts to get a nested type declaration declared directly by the type, optionally matching its
+	/// generic arity.
+	/// </summary>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1021:Avoid out parameters")]
+	public static bool TryGetNestedType<T>(
+		this CodeQueryResult<T> type,
+		string name,
+		out TypeDeclarationSyntax? nested,
+		int? arity = null
+	)
+		where T : TypeDeclarationSyntax
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+		if (string.IsNullOrWhiteSpace(name))
+			throw new ArgumentException("The nested type name cannot be null or whitespace.", nameof(name));
+
+		foreach (var candidate in type.Node.Members.OfType<TypeDeclarationSyntax>())
+		{
+			if (candidate.Identifier.ValueText != name)
+				continue;
+
+			if (arity is not null && (candidate.TypeParameterList?.Parameters.Count ?? 0) != arity)
+				continue;
+
+			nested = candidate;
+			return true;
+		}
+
+		nested = null;
+		return false;
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Accessibility
+	// ---------------------------------------------------------------------------------------------
+
+	/// <summary>
+	/// Determines whether the member's effective accessibility matches the given value. When the member has no
+	/// accessibility modifier, the C# default is applied (for example <see cref="Accessibility.Private"/> for a
+	/// class member or nested type, and <see cref="Accessibility.Internal"/> for a top-level type).
+	/// </summary>
+	public static bool HasAccessibility<T>(this CodeQueryResult<T> member, Accessibility accessibility)
+		where T : MemberDeclarationSyntax
+	{
+		if (member is null)
+			throw new ArgumentNullException(nameof(member));
+
+		// Use AccessibilityFacts to resolve the effective accessibility, applying C# defaults.
+		return AccessibilityFacts.GetEffectiveAccessibility(member.Node) == accessibility;
+	}
+
+	/// <summary>
+	/// Determines whether the property has a getter whose effective accessibility matches the given value.
+	/// </summary>
+	public static bool HasGetterAccessibility(
+		this CodeQueryResult<PropertyDeclarationSyntax> property,
+		Accessibility accessibility
+	)
+	{
+		if (property is null)
+			throw new ArgumentNullException(nameof(property));
+
+		foreach (var accessor in property.Node.AccessorList?.Accessors ?? [])
+		{
+			if (accessor.IsKind(SyntaxKind.GetAccessorDeclaration))
+			{
+				// The accessor inherits the property's accessibility when it has no modifier of its own.
+				return AccessibilityFacts.GetEffectiveAccessibility(accessor, property.Node) == accessibility;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Determines whether the property has a setter whose effective accessibility matches the given value.
+	/// </summary>
+	public static bool HasSetterAccessibility(
+		this CodeQueryResult<PropertyDeclarationSyntax> property,
+		Accessibility accessibility
+	)
+	{
+		if (property is null)
+			throw new ArgumentNullException(nameof(property));
+
+		foreach (var accessor in property.Node.AccessorList?.Accessors ?? [])
+		{
+			if (accessor.IsKind(SyntaxKind.SetAccessorDeclaration))
+			{
+				// The accessor inherits the property's accessibility when it has no modifier of its own.
+				return AccessibilityFacts.GetEffectiveAccessibility(accessor, property.Node) == accessibility;
+			}
+		}
+
+		return false;
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Base types
+	// ---------------------------------------------------------------------------------------------
+
+	/// <summary>
+	/// Determines whether the type declares the given base type in its base list, resolved through the query's
+	/// compilation.
+	/// </summary>
+	public static bool HasBaseType<T>(this CodeQueryResult<T> type, TypeReference baseType)
+		where T : TypeDeclarationSyntax
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+		if (baseType is null)
+			throw new ArgumentNullException(nameof(baseType));
+
+		foreach (var baseTypeSyntax in type.Node.BaseList?.Types ?? [])
+		{
+			if (type.Query.Matches(baseTypeSyntax.Type, baseType))
+				return true;
+		}
+
+		return false;
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Generic type parameters
+	// ---------------------------------------------------------------------------------------------
+
+	/// <summary>
+	/// Determines whether the type declares a type parameter with the given name.
+	/// </summary>
+	public static bool HasGenericTypeParameter<T>(this CodeQueryResult<T> type, string typeParameter)
+		where T : TypeDeclarationSyntax
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+		if (string.IsNullOrWhiteSpace(typeParameter))
+			throw new ArgumentException("The type parameter name cannot be null or whitespace.", nameof(typeParameter));
+
+		// Check the type's TypeParameterList for a parameter with the specified name.
+		return (type.Node.TypeParameterList?.Parameters ?? []).Any(parameter =>
+			parameter.Identifier.ValueText == typeParameter
+		);
+	}
+
+	/// <summary>
+	/// Determines whether the type declares type parameters with all of the given names.
+	/// </summary>
+	public static bool HasGenericTypeParameters<T>(this CodeQueryResult<T> type, params string[] typeParameters)
+		where T : TypeDeclarationSyntax
+	{
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
+		if (typeParameters is null)
+			throw new ArgumentNullException(nameof(typeParameters));
+
+		var declared = (type.Node.TypeParameterList?.Parameters ?? []).Select(parameter =>
+			parameter.Identifier.ValueText
+		);
+
+		return typeParameters.All(declared.Contains);
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Namespaces
+	// ---------------------------------------------------------------------------------------------
+
+	/// <summary>
+	/// Determines whether the node is declared within the specified namespace.
+	/// </summary>
+	public static bool IsInNamespace<T>(this CodeQueryResult<T> node, string @namespace)
+		where T : SyntaxNode
+	{
+		if (node is null)
+			throw new ArgumentNullException(nameof(node));
+
+		// Delegate to the query's namespace check.
+		return node.Query.IsInNamespace(node.Node, @namespace);
+	}
+
+	/// <summary>
+	/// Determines whether the node is declared in the global namespace (no enclosing namespace declaration).
+	/// </summary>
+	public static bool IsInGlobalNamespace<T>(this CodeQueryResult<T> node)
+		where T : SyntaxNode
+	{
+		if (node is null)
+			throw new ArgumentNullException(nameof(node));
+
+		// Delegate to the query's namespace check.
+		return node.Query.IsInGlobalNamespace(node.Node);
 	}
 
 	static bool IndexerParametersMatch(CodeQuery query, IndexerDeclarationSyntax indexer, TypeReference[] expected)

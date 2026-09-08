@@ -417,6 +417,135 @@ public class TypeLibraryGeneratorTests : TUnitSourceGeneratorTestBase<TypeLibrar
 		await Assert.That(generated).DoesNotContain("GetTypes()");
 	}
 
+	[Test]
+	public async Task Generate_GetTypes_PositionalIncludeInGetTypes_NamespaceOnlyForm(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework;
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test;
+
+			[GenerateTypeLibrary(ClassName = "SampleTypeLibrary", Namespace = "Test")]
+			static partial class TypeLibraryModel
+			{
+				[TypeRef("System.Diagnostics", 0, true)]
+				static readonly TypeIdentity Activity = default;
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(result, "Test.TypeLibraryModel.g.cs", cancellationToken);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains(") => [Activity];");
+	}
+
+	[Test]
+	public async Task Generate_GetTypes_PositionalIncludeInGetTypes_ExplicitForm(CancellationToken cancellationToken)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework;
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test;
+
+			[GenerateTypeLibrary(ClassName = "SampleTypeLibrary", Namespace = "Test")]
+			static partial class TypeLibraryModel
+			{
+				[TypeRef("Activity", "System.Diagnostics", -1, true)]
+				static readonly TypeIdentity Activity = default;
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(result, "Test.TypeLibraryModel.g.cs", cancellationToken);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains(") => [Activity];");
+	}
+
+	[Test]
+	public async Task Generate_GetTypes_NamedCtorIncludeInGetTypes(CancellationToken cancellationToken)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework;
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test;
+
+			[GenerateTypeLibrary(ClassName = "SampleTypeLibrary", Namespace = "Test")]
+			static partial class TypeLibraryModel
+			{
+				[TypeRef("System.Diagnostics", includeInGetTypes: true)]
+				static readonly TypeIdentity Activity = default;
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(result, "Test.TypeLibraryModel.g.cs", cancellationToken);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains(") => [Activity];");
+	}
+
+	[Test]
+	public async Task Generate_TypeRefAttribute_ExposesIncludeInGetTypesCtorParameter(
+		CancellationToken cancellationToken
+	)
+	{
+		const string source = "public sealed class UnrelatedType { }";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		var generated = await GetGeneratedStringAsync(result, "TypeRefAttribute.g.cs", cancellationToken);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("bool includeInGetTypes = false");
+		await Assert.That(generated).Contains("IncludeInGetTypes = includeInGetTypes;");
+	}
+
+	[Test]
+	public async Task Generate_FileScopedNamespaces(CancellationToken cancellationToken)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework;
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test;
+
+			[GenerateTypeLibrary(ClassName = "SampleTypeLibrary", Namespace = "Test")]
+			static partial class TypeLibraryModel
+			{
+				[TypeRef("System.Diagnostics")]
+				static readonly TypeIdentity Activity = default;
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		var library = await GetGeneratedStringAsync(result, "Test.TypeLibraryModel.g.cs", cancellationToken);
+		await Assert.That(library).IsNotNull();
+		await Assert.That(library).Contains("namespace Test;");
+		await Assert.That(library).DoesNotContain("namespace Test\n{");
+
+		var typeRefs = await GetGeneratedStringAsync(
+			result,
+			"TypeLibrary.SampleTypeLibrary.Test.TypeLibraryModel.TypeRefs.g.cs",
+			cancellationToken
+		);
+		await Assert.That(typeRefs).IsNotNull();
+		await Assert.That(typeRefs).Contains("namespace Test;");
+		await Assert.That(typeRefs).DoesNotContain("namespace Test\n{");
+		await Assert.That(typeRefs).Contains("TypeRefMarkers");
+		await Assert.That(typeRefs).Contains("[Activity]");
+	}
+
 	static async Task<string?> GetGeneratedStringAsync(
 		DriverRunResult result,
 		string fileName,

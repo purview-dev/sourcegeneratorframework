@@ -57,6 +57,11 @@ Every `Get` has an accompanying `Has` (bool) and `TryGet` (out): `GetMethod`/`Ha
 `GetField`, `GetConstructor`, `GetNamespace`, `GetTypeDeclaration`, plus generic `Get<T>`/`Has<T>`
 and `GetSyntaxTree`/`HasSyntaxTree`. `Get` throws `SyntaxNotFoundException` when nothing matches.
 
+Type lookups accept an optional generic arity — `GetClass(name, arity)` / `HasClass(name, arity)` — and the
+`TypeReference`/`TypeIdentity` overloads match arity automatically from the identity, so
+`new TypeIdentity("ResourceDefinition", ns, arity: 1)` finds `ResourceDefinition<T>` without matching the
+non-generic `ResourceDefinition`.
+
 Every `Get` returns a `CodeQueryResult<T>` — the matched syntax node (`Node`) plus a query scoped to it
 (`Query`), with implicit conversions to both the node and the scoped query. Use `.Node` for direct syntax
 access, or chain member queries (the originating query is carried by the result, so it is not passed again).
@@ -70,6 +75,11 @@ result.Generated().HasReturnType("Compute", TypeReference.Create<int>());
 result.Generated().GetMethod("Format").HasParameters(TypeReference.Create<string>(), objectReference);
 ```
 
+When a test expects a nullable annotation, prefer the test-only `query.MakeNullable(type)` extension (on a
+`CodeQuery`, accepting a `TypeReference` or `TypeIdentity`). It resolves the annotation against the query's
+compilation and, unlike `TypeReference.Nullable()`/`TypeIdentity.MakeNullable()`, does not trigger the
+`PSGFR16` context-overload suggestion (tests have no generation context to pass).
+
 Member chaining from a type declaration (`MemberQueryExtensions`):
 
 ```csharp
@@ -80,6 +90,18 @@ service.HasMethod("Add", intType, complexType);
 service.HasMethodReturnType("Add", stringType);
 service.HasConstructor(stringType);
 service.HasAttribute("SomeAttribute");
+```
+
+Node-inspection checks on scoped results:
+
+```csharp
+result.Generated().GetClass("Service").HasAccessibility(Accessibility.Public);      // resolves C# defaults
+result.Generated().GetClass("Service").GetProperty("Name").HasSetterAccessibility(Accessibility.Private);
+result.Generated().GetClass("ResourceDefinition", 1).HasGenericTypeParameters("TResourceType");
+result.Generated().GetClass("ResourceDefinition", 1).HasBaseType(new TypeIdentity("ResourceDefinition", ns));
+result.Generated().GetClass("Service").HasNestedType("Builder");                    // GetNestedType(...) to fetch
+result.Generated().GetClass("Service").IsInNamespace("Example.Models");             // IsInGlobalNamespace() for no namespace
+result.Generated().IsInNamespace(cls.Node, "Example.Models");                       // or on the query directly
 ```
 
 ## Configuring options and a reusable starting point
@@ -118,6 +140,12 @@ public sealed record MyGeneratorTestOptions : SourceGeneratorTestOptions
 `Compile()` returns a copy with `CompileToAssembly = true`, preserving the derived options type. Use the
 base class hooks `OnBeforeRun`/`OnBeforeRunAsync`/`OnAfterRun` to mutate sources/options per run (for
 example to append a marker attribute source via `WithAdditionalSources`).
+
+When `CompileToAssembly` is enabled, emission is fully in-memory. On .NET 8+ the assembly loads into a
+collectible `AssemblyLoadContext`, so the result is `IDisposable` — `using var result = ...` unloads it and
+keeps repeated runs from polluting the default context. `result.CompilationResult.Assembly` is the runnable
+assembly (generated code can execute); `result.CompilationResult.Metadata` / `.MetadataAssembly` give a
+metadata-only reflection view (types, members, attributes) over the emitted assembly without executing code.
 
 ## Best practices
 

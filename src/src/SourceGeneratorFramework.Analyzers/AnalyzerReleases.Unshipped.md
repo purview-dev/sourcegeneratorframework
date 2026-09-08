@@ -20,6 +20,7 @@ PSGFR25 | Purview.SourceGeneratorFramework | Warning | DiagnosticAnalyzer is not
 PSGFR26 | Purview.SourceGeneratorFramework | Error | Source generator is not marked with Generator
 PSGFR27 | Purview.SourceGeneratorFramework | Warning | Roslyn component type must be public
 PSGFR28 | Purview.SourceGeneratorFramework | Info | Code fixer targets a diagnostic no analyzer produces
+PSGFR29 | Purview.SourceGeneratorFramework | Warning | Do not embed a CodeWriter in a string
 ADM0001 | Target | Error | Target attribute type cannot be resolved
 ADM0002 | Property | Error | Property type is not supported for attribute extraction
 ADM0003 | Source | Error | Specified constructor index/name does not exist on the target attribute
@@ -38,3 +39,7 @@ TLB0005 | TypeLibrary | Error | Generated type library class name is not a valid
 TLB0006 | TypeLibrary | Error | Generated type library namespace is not valid
 TLB0008 | TypeLibrary | Error | Type library member accessibility is invalid
 TLB0009 | TypeLibrary | Error | Type library reference member requires an initializer
+TLB0010 | TypeLibrary | Info | Type library marker member should be initialized to default
+TLB0011 | TypeLibrary | Error | GenerateTypeLibrary spec must be declared partial
+TLB0012 | TypeLibrary | Error | Type library spec class name clashes with the generated type library class
+TLB0013 | TypeLibrary | Warning | Type library spec class name matches the generated type library class

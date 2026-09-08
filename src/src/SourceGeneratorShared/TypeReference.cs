@@ -215,14 +215,20 @@ public sealed record TypeReference
 	/// <summary>
 	/// Implicitly converts a named type to an unmodified reference.
 	/// </summary>
-	public static implicit operator TypeReference(TypeIdentity type) => type == TypeIdentity.Empty ? Empty : new(type);
+	public static implicit operator TypeReference(TypeIdentity type) =>
+		// TypeIdentity.Empty is the only identity with a null name, so this avoids `==`, which can resolve
+		// to the cross-type operator and recurse back through this conversion.
+		type.Name
+			is null
+			? Empty
+			: new(type);
 
 	/// <summary>
 	/// Implicitly converts a named type to an unmodified reference, or <see langword="null"/> if the type is
 	/// </summary>
 	/// <param name="type"></param>
 	public static implicit operator TypeReference?(TypeIdentity? type) =>
-		type == null || type == TypeIdentity.Empty ? null : new(type!);
+		type is null || type.Value.Name is null ? null : new(type.Value);
 
 	/// <summary>
 	/// Implicitly converts a reference to its rendered name.

@@ -87,6 +87,42 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		isEnabledByDefault: true
 	);
 
+	public static readonly DiagnosticDescriptor MarkerMissingDefaultInitializer = new(
+		"TLB0010",
+		"Type library marker member should be initialized to default",
+		"Type library marker member '{0}' should declare '= default' so the marker is explicit",
+		"TypeLibrary",
+		DiagnosticSeverity.Info,
+		isEnabledByDefault: true
+	);
+
+	public static readonly DiagnosticDescriptor SpecMustBePartial = new(
+		"TLB0011",
+		"GenerateTypeLibrary spec must be declared partial",
+		"GenerateTypeLibrary spec '{0}' must be declared partial so the generated TypeRefMarkers member can be added",
+		"TypeLibrary",
+		DiagnosticSeverity.Error,
+		isEnabledByDefault: true
+	);
+
+	public static readonly DiagnosticDescriptor SpecClassNameClashesWithGeneratedClass = new(
+		"TLB0012",
+		"Type library spec class name clashes with the generated type library class",
+		"Type library spec class '{0}' has the same name as the generated type library class '{1}'; rename the spec class so the generated partial declarations do not collide",
+		"TypeLibrary",
+		DiagnosticSeverity.Error,
+		isEnabledByDefault: true
+	);
+
+	public static readonly DiagnosticDescriptor SpecClassNameCollidesAcrossNamespaces = new(
+		"TLB0013",
+		"Type library spec class name matches the generated type library class",
+		"Type library spec class '{0}' matches the generated type library class '{1}'; rename the spec class so the generated and spec types are clearly distinct",
+		"TypeLibrary",
+		DiagnosticSeverity.Warning,
+		isEnabledByDefault: true
+	);
+
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
 		[
 			SpecNotStaticClass,
@@ -97,6 +133,10 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 			InvalidNamespace,
 			MemberAccessibilityInvalid,
 			ReferenceMemberMissingInitializer,
+			MarkerMissingDefaultInitializer,
+			SpecMustBePartial,
+			SpecClassNameClashesWithGeneratedClass,
+			SpecClassNameCollidesAcrossNamespaces,
 		];
 
 	public override void Initialize(AnalysisContext context)
@@ -162,7 +202,28 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		if (!typeSymbol.IsStatic)
 			context.ReportDiagnostic(Diagnostic.Create(SpecNotStaticClass, typeLocation));
 
+		if (!IsPartial(typeSymbol, context.CancellationToken))
+			context.ReportDiagnostic(Diagnostic.Create(SpecMustBePartial, typeLocation, typeSymbol.Name));
+
 		var className = GetNamedArgument(generateAttribute, "ClassName", (string?)null);
+		var generatedClassName = className ?? "TypeLibrary";
+		if (string.Equals(typeSymbol.Name, generatedClassName, StringComparison.Ordinal))
+		{
+			var generatedNamespace = GetNamedArgument(generateAttribute, "Namespace", (string?)null);
+			var specNamespace = typeSymbol.ContainingNamespace.IsGlobalNamespace
+				? null
+				: typeSymbol.ContainingNamespace.ToDisplayString();
+			var sameNamespace = string.Equals(
+				generatedNamespace ?? string.Empty,
+				specNamespace ?? string.Empty,
+				StringComparison.Ordinal
+			);
+
+			var descriptor = sameNamespace
+				? SpecClassNameClashesWithGeneratedClass
+				: SpecClassNameCollidesAcrossNamespaces;
+			context.ReportDiagnostic(Diagnostic.Create(descriptor, typeLocation, typeSymbol.Name, generatedClassName));
+		}
 		if (className is not null && !SyntaxFacts.IsValidIdentifier(className))
 			context.ReportDiagnostic(Diagnostic.Create(InvalidClassName, typeLocation, className));
 
@@ -244,6 +305,11 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 				return;
 			}
 
+			if (HasNoInitializer(field, context.CancellationToken))
+				context.ReportDiagnostic(
+					Diagnostic.Create(MarkerMissingDefaultInitializer, memberLocation, field.Name)
+				);
+
 			if (!TryResolveTypeRef(typeRef, field.Name, out _, out placementNamespace))
 			{
 				context.ReportDiagnostic(Diagnostic.Create(MemberTypeNotResolved, memberLocation, field.Name));
@@ -280,6 +346,41 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		}
 
 		return false;
+	}
+
+	/// <summary>
+	/// Determines whether the field declares no initializer at all, rather than an explicit
+	/// <c>= default</c> marker.
+	/// </summary>
+	static bool HasNoInitializer(IFieldSymbol field, CancellationToken cancellationToken)
+	{
+		foreach (var reference in field.DeclaringSyntaxReferences)
+		{
+			if (reference.GetSyntax(cancellationToken) is VariableDeclaratorSyntax declarator)
+				return declarator.Initializer is null;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Determines whether every declaration of the spec type carries the <c>partial</c> modifier, so
+	/// the generated <c>TypeRefMarkers</c> partial can be merged into it.
+	/// </summary>
+	static bool IsPartial(INamedTypeSymbol symbol, CancellationToken cancellationToken)
+	{
+		var hasDeclarations = false;
+		foreach (var reference in symbol.DeclaringSyntaxReferences)
+		{
+			hasDeclarations = true;
+			if (reference.GetSyntax(cancellationToken) is not TypeDeclarationSyntax declaration)
+				return false;
+
+			if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
+				return false;
+		}
+
+		return hasDeclarations;
 	}
 
 	static bool IsDefaultExpression(ExpressionSyntax? expression) =>
@@ -326,6 +427,7 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		if (typeRef.ConstructorArguments.Length == 0)
 			return false;
 
+#pragma warning disable format
 		switch (typeRef.ConstructorArguments[0].Value)
 		{
 			case ITypeSymbol typeSymbol:
@@ -338,17 +440,20 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 					namedNamespace
 					?? GetConstructorArgument(typeRef, 1, (string?)null)
 					?? typeSymbol.ContainingNamespace.ToDisplayString();
+
 				break;
 			}
 			case string typeNameString:
 			{
 				typeName = typeNameString;
 				memberNamespace = namedNamespace ?? GetConstructorArgument(typeRef, 1, (string?)null);
+
 				break;
 			}
 			default:
 				return false;
 		}
+#pragma warning restore format
 
 		if (string.IsNullOrWhiteSpace(memberNamespace))
 			return false;
@@ -362,6 +467,7 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		if (string.IsNullOrWhiteSpace(@namespace))
 			return false;
 
+		// A valid namespace is a series of valid identifiers separated by dots. Empty segments are not allowed.
 		return @namespace.Split('.').All(segment => segment.Length > 0 && SyntaxFacts.IsValidIdentifier(segment));
 	}
 

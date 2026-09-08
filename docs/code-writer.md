@@ -34,6 +34,31 @@ Each declaration writer has:
   (`options => options with { ... }`); and
 - a **scope form** (`...Scope`) returning a `BlockScope` for `using` when you need fine-grained control.
 
+Type declarations can also be written **without a body**, terminated with a semicolon instead of an empty
+block — useful for marker types, primary-constructor records, and host-kit stubs:
+
+```csharp
+// public sealed partial class TestingHostKit;
+writer.Class(
+    new TypeDeclarationOptions("TestingHostKit", TypeDeclarationAccessibility.Public)
+    {
+        IsPartial = true,
+        Attributes = [new(HostKitAttribute) { Arguments = [new(true, "GenerateOptions", true)] }],
+    }
+);
+
+// public record class Point(int X, int Y);
+writer.RecordClass(
+    new TypeDeclarationOptions("Point") { PrimaryConstructorParameters = [new("X", intType), new("Y", intType)] }
+);
+
+// writer.Class("C");  // public sealed partial class C;
+```
+
+The semicolon-terminated form is valid for `Class`, `Struct`, `RecordClass`, `RecordStruct`, and `Interface`
+(primary-constructor parameters, base types, and `where` constraints are still written). Enums and delegates
+always require a body / self-terminate.
+
 ```csharp
 writer.Class(
     "OrderService",
@@ -109,6 +134,41 @@ using (writer.ExtensionBlockScope(
 The receiver must be a plain named type; composed references (arrays, pointers, nullable annotations,
 type parameters and `dynamic`) and the null literal are rejected. Use the callback form
 `writer.ExtensionBlock(receiver, body => ...)` for a complete block in one call.
+
+### Enums
+
+Generated enums are emitted with the `[Embedded]` marker attribute by default — the same default as
+`AttributeClass` — so the enum is embedded into each consuming assembly rather than leaking as a
+reference to the generator's type surface. Opt a specific enum out with
+`IncludeEmbeddedAttribute = false` in the `configure` callback:
+
+```csharp
+writer.Enum("ServiceLifetime", TypeDeclarationAccessibility.Public,
+    options => options with { IncludeEmbeddedAttribute = false });
+```
+
+Fields are separated by a blank line, matching the spacing applied to other members, so XML summaries
+and attributes stay readable:
+
+```csharp
+writer.Enum("Status", TypeDeclarationAccessibility.Public,
+    fields:
+    [
+        new("None", 0),
+        new("Ready", 1) { XmlSummary = ["The service is ready."] },
+    ]);
+
+// [global::Microsoft.CodeAnalysis.Embedded]
+// [global::System.Runtime.CompilerServices.CompilerGenerated]
+// [global::System.CodeDom.Compiler.GeneratedCode("TestGenerator", "1.0.0")]
+// public enum Status
+// {
+//     None = 0,
+//
+//     /// <summary>The service is ready.</summary>
+//     Ready = 1,
+// }
+```
 
 ## Statements
 
@@ -452,6 +512,18 @@ writer.Property("Name", TypeReference.Create<string>(), TypeDeclarationAccessibi
   `PreferStructuredCodeWriterIfBlockAnalyzer` (PSGFR23) flags `OpenBlockScope`/`OpenBlock` headers that
   write an `if`, `else if`, or `else` statement, and its code fix rewrites them.
 - Always consume scope-returning methods with `using` (PSGFR17).
+- Never embed a `CodeWriter` in a string. The XML block-writing methods (`XmlCode`, `XmlSummary`,
+  `XmlCodeBlock`, ...) return the `CodeWriter`, so interpolating or concatenating them implicitly calls
+  `ToString()` and dumps the writer's possibly-incomplete buffer — `CodeWriterInStringContextAnalyzer`
+  (PSGFR29) flags it. For inline XML tags in documentation text, use the static helpers instead:
+  `XmlCommentWriter.XmlInlineCode("value")` → `<c>value</c>`, or `XmlInlineCodeBlock(...)` for a `<code>`
+  block; `writer.XmlCode(...)` writes to the buffer and returns the writer, it does not produce a string.
+  When the writer is genuinely complete, call `ToString()` explicitly.
+- Never write an open generic as a type. A `TypeIdentity` with a generic arity but no type arguments renders
+  a placeholder such as `List<>` or `List<,>`, which is invalid C# in a type position (base type, return
+  type, parameter, property, ...). `CodeWriter` rejects it when it is emitted as a type — construct it with
+  `MakeGeneric(...)` first. An arity mismatch (`MakeGeneric` supplying the wrong number of arguments) is
+  also rejected, so the mismatch surfaces as a clear exception rather than corrupted generated code.
 - Keep every value emitted through the structured API so layout stays deterministic and the analyzers
   can guide callers back to the best practice.
 

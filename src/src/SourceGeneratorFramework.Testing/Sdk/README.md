@@ -127,6 +127,26 @@ public record MyTestOptions : SourceGeneratorTestOptions
 var result = await runner.RunAsync(source, MyTestOptions.Default.Compile());
 ```
 
+### Compiled output
+
+Emission is fully in-memory (no files are written). On .NET 8+ the emitted assembly is loaded into a fresh
+**collectible `AssemblyLoadContext`**, so the result is `IDisposable` and the assembly can be unloaded when
+you are done with it — keeping repeated `CompileToAssembly` runs from accumulating assemblies in the
+process-wide default context:
+
+```csharp
+using var result = await runner.RunAsync(source, options.Compile());
+
+result.CompilationResult.Assembly;          // runnable assembly (may execute generated code)
+result.CompilationResult.Metadata;          // metadata-only MetadataLoadContext (never executes)
+result.CompilationResult.MetadataAssembly;  // emitted assembly reflected within that context
+```
+
+`CompilationResult.Metadata` / `MetadataAssembly` provide a metadata-only reflection view over the emitted
+assembly: inspect types, members and attributes without loading it into the runtime or executing any code.
+They are created lazily on first access. Dispose the result (or its `DriverRunResult`) to unload the
+collectible context and release the metadata view.
+
 Analyzer options are preserved under their supplied keys. Keys without the Roslyn
 `build_property.` prefix are additionally exposed as compiler-visible MSBuild properties, so either
 `MyGenerator_Disable` or `build_property.MyGenerator_Disable` can be used in tests.
@@ -158,6 +178,7 @@ query.GetClass("Service").GetMethod("DoWork").HasParameters(intType, nullableInt
 query.GetClass("Widget", "Example.Models");   // namespace-scoped lookup
 query.HasClass(new TypeReference(new TypeIdentity("Widget", "Example.Models")));  // type-identity lookup
 query.GetClass(TypeIdentity.Create<Widget>()); // a TypeIdentity is implicitly castable to TypeReference
+query.GetClass("ResourceDefinition", 1);       // generic lookup by type-parameter count
 
 ClassDeclarationSyntax cls = query.GetClass("Service");   // implicit conversion to the node
 query.GetClass("Service").Node.Members;                    // or use .Node for direct syntax access
@@ -165,6 +186,28 @@ query.GetClass("Service").Node.Members;                    // or use .Node for d
 
 `Get` throws `SyntaxNotFoundException` when nothing matches; `Has` returns `bool`. See the
 `source-generator-testing` agent skill for the full reference.
+
+Type lookups accept an optional generic arity — `GetClass(name, arity)` / `HasClass(name, arity)` — and the
+`TypeReference`/`TypeIdentity` overloads match arity automatically from the identity, so
+`new TypeIdentity("ResourceDefinition", ns, arity: 1)` finds `ResourceDefinition<T>` without matching the
+non-generic `ResourceDefinition`.
+
+Scoped results also expose node-inspection checks through `MemberQueryExtensions`:
+`HasAccessibility` (resolves C# defaults), `HasGetterAccessibility` / `HasSetterAccessibility`,
+`HasBaseType`, `HasGenericTypeParameter(s)`, `GetNestedType` / `HasNestedType`, `IsInNamespace` /
+`IsInGlobalNamespace`, and `GetDeclaredNamespace` on the query itself.
+
+### Nullable expected types in tests
+
+Tests asserting a nullable expected type can use the test-only `query.MakeNullable(type)` extension on a
+`CodeQuery` (it accepts a `TypeReference` or `TypeIdentity`). It resolves the annotation against the query's
+compilation and, unlike `TypeReference.Nullable()`/`TypeIdentity.MakeNullable()`, does not trigger the
+`PSGFR16` context-overload suggestion — tests have no generation context to pass.
+
+```csharp
+var query = result.Generated();
+query.GetClass("Service").HasProperty("Name", query.MakeNullable(TypeReference.Create<string>()));
+```
 
 ## Refactoring tests
 

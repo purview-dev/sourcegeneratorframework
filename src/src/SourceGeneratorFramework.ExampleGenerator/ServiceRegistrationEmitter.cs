@@ -28,9 +28,9 @@ static class ServiceRegistrationEmitter
 			options => (options with { IsPartial = false }),
 			ew =>
 			{
-				ew.Line("Singleton = 0,");
-				ew.Line("Scoped = 1,");
-				ew.Line("Transient = 2,");
+				ew.EnumField("Singleton", 0);
+				ew.EnumField("Scoped", 1);
+				ew.EnumField("Transient", 2);
 			}
 		);
 

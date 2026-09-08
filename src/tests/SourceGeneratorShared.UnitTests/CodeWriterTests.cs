@@ -505,6 +505,179 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task Class_WithoutBody_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.Class(new TypeDeclarationOptions("C"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("public sealed partial class C;\n");
+	}
+
+	[Test]
+	public async Task Class_WithoutBody_WithBaseType_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.Class(new TypeDeclarationOptions("C") { BaseType = Type("Base") });
+
+		await Assert.That(writer.ToString()).IsEqualTo("public sealed partial class C : Base;\n");
+	}
+
+	[Test]
+	public async Task RecordClass_WithoutBody_WithPrimaryConstructor_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.RecordClass(
+			new TypeDeclarationOptions("R")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsPartial = false,
+				IsSealed = false,
+				PrimaryConstructorParameters = [new ParameterDeclarationOptions("value", Type("string"))],
+			}
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("public record class R(string value);\n");
+	}
+
+	[Test]
+	public async Task Interface_WithoutBody_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.Interface(
+			new TypeDeclarationOptions("IService") { Accessibility = TypeDeclarationAccessibility.Public }
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("public partial interface IService;\n");
+	}
+
+	[Test]
+	public async Task TypeDeclarationOptions_NullableTypeIdentity_UsesIdentityName()
+	{
+		TypeIdentity? identity = new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace");
+
+		var declaration = new TypeDeclarationOptions(identity, TypeDeclarationAccessibility.Public);
+
+		await Assert.That(declaration.Name).IsEqualTo("TestingHostKit");
+		await Assert.That(declaration.Name).IsNotEqualTo("global::Testing.HostKitNamespace.TestingHostKit");
+	}
+
+	[Test]
+	public async Task BaseType_ConstructedArityTwoGeneric_RendersAllArguments()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace"),
+			new TypeIdentity("DefaultAspireResource", "Purview.Aspire.ResourceKit")
+		);
+
+		var declaration = new TypeDeclarationOptions("RedisResourceKit")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsPartial = true,
+			IsSealed = true,
+			BaseType = resourceKitBase,
+		};
+
+		using (writer.ClassScope(declaration))
+		{
+			// Empty body.
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.Contains(
+				": global::Purview.Aspire.ResourceKit.ResourceKitBase<global::Testing.HostKitNamespace.TestingHostKit, global::Purview.Aspire.ResourceKit.DefaultAspireResource>"
+			);
+	}
+
+	[Test]
+	public async Task BaseType_NestedConstructedGenericArgument_RendersAndDoesNotOverflow()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1).MakeGeneric(
+				new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace")
+			),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		var declaration = new TypeDeclarationOptions("RedisResourceKit")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsPartial = true,
+			IsSealed = true,
+			BaseType = resourceKitBase,
+		};
+
+		using (writer.ClassScope(declaration))
+		{
+			// Empty body.
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.Contains(
+				": global::Purview.Aspire.ResourceKit.ResourceKitBase<global::Purview.Aspire.ResourceKit.HostKitBase<global::Testing.HostKitNamespace.TestingHostKit>, global::Testing.RedisResourceKit>"
+			);
+	}
+
+	[Test]
+	public async Task BaseType_OpenGeneric_ThrowsValidationError()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new TypeDeclarationOptions("C")
+		{
+			BaseType = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2),
+		};
+
+		await Assert.That(() => writer.ClassScope(declaration)).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task MakeGeneric_ArityMismatch_Throws()
+	{
+		var open = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2);
+
+		await Assert
+			.That(() => open.MakeGeneric(new TypeIdentity("DefaultAspireResource", "Purview.Aspire.ResourceKit")))
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task GenerateResourceKit_OpenGenericTypeArgument_ThrowsClearError()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+		var resourceKit = new TypeIdentity("RedisResourceKit", "Testing");
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			resourceKit
+		);
+		var resourceDefinitionAttribute = new AttributeDeclarationOptions(
+			new TypeIdentity("ResourceDefinitionAttribute", "Purview.Aspire.ResourceKit")
+		);
+
+		await Assert
+			.That(() =>
+				writer
+					.FileScopedNamespace(resourceKit)
+					.Class(
+						new(resourceKit, TypeDeclarationAccessibility.Public)
+						{
+							BaseType = resourceKitBase,
+							IsPartial = true,
+							Attributes = [resourceDefinitionAttribute],
+						},
+						_ => { }
+					)
+			)
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
 	public async Task RecordStruct_WithOptions_WritesReadonlyRecordStruct()
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -812,7 +985,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false)
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
 					+ "public enum Status : byte\n{\n\tNone = 0,\n\tReady = 1,\n}\n"
 			);
 	}
@@ -931,14 +1105,60 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false)
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
 					+ "public enum Status\n"
 					+ "{\n"
 					+ "\t/// <summary>No status has been selected.</summary>\n"
 					+ "\t[Obsolete]\n"
 					+ "\tNone = 0,\n"
+					+ "\n"
 					+ "\tReady = 1 << 0,\n"
+					+ "\n"
 					+ "\tUnknown,\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task Enum_WithEmbeddedAttributeDisabled_OmitsEmbeddedAttribute()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Enum(
+			new TypeDeclarationOptions("Status") { IncludeEmbeddedAttribute = false },
+			body => body.EnumField(new EnumFieldDeclarationOptions("Ready", 1))
+		);
+
+		await Assert.That(writer.ToString()).DoesNotContain("[global::Microsoft.CodeAnalysis.Embedded]");
+	}
+
+	[Test]
+	public async Task Enum_WithFieldSummaries_SeparatesFieldsWithBlankLines()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new TypeDeclarationOptions("Status") { Accessibility = TypeDeclarationAccessibility.Public };
+
+		// Act
+		writer.Enum(
+			declaration,
+			new EnumFieldDeclarationOptions("None", 0),
+			new EnumFieldDeclarationOptions("Ready", 1) { XmlSummary = ["The service is ready."] }
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n"
+					+ "{\n"
+					+ "\tNone = 0,\n"
+					+ "\n"
+					+ "\t/// <summary>The service is ready.</summary>\n"
+					+ "\tReady = 1,\n"
 					+ "}\n"
 			);
 	}
@@ -4653,7 +4873,9 @@ partial void Apply()
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false) + "public enum Status\n{\n\tReady = 1,\n}\n"
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n{\n\tReady = 1,\n}\n"
 			);
 	}
 
@@ -4670,8 +4892,9 @@ partial void Apply()
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false)
-					+ "public enum Status\n{\n\tReady = 1,\n\tProcessing = 2,\n}\n"
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n{\n\tReady = 1,\n\n\tProcessing = 2,\n}\n"
 			);
 	}
 

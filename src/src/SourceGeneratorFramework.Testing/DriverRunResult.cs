@@ -29,8 +29,17 @@ public sealed record class DriverRunResult(
 	ImmutableArray<SyntaxTree> AllSyntaxTrees,
 	ImmutableArray<SyntaxTree> PrimarySyntaxTrees,
 	ImmutableArray<LogEntry> LogEntries
-)
+) : IDisposable
 {
+	/// <summary>
+	/// Unloads the compiled test assembly and releases the metadata view, when one was produced.
+	/// </summary>
+	/// <remarks>
+	/// Only disposes the compiled output; the <see cref="Compilation"/> and generated trees remain usable.
+	/// The result (and the <see cref="Assembly"/>/metadata it exposes) must not be used after disposal.
+	/// </remarks>
+	public void Dispose() => CompilationResult.Emitted?.Dispose();
+
 	/// <summary>
 	/// Throws <see cref="DriverRunValidationException"/> containing all generation exceptions,
 	/// compilation errors, emit errors, and generator log errors found in the run.
@@ -167,7 +176,30 @@ public sealed record class CompilationRunResult(
 	Compilation Compilation,
 	Assembly? Assembly,
 	ImmutableArray<Diagnostic> Diagnostics
-);
+)
+{
+	/// <summary>
+	/// The emitted output produced when <see cref="SourceGeneratorTestOptions.CompileToAssembly"/> was enabled,
+	/// or <see langword="null"/> otherwise.
+	/// </summary>
+	internal EmittedAssembly? Emitted { get; init; }
+
+	/// <summary>
+	/// Gets a metadata-only view of the emitted assembly, or <see langword="null"/> when compilation to an
+	/// assembly was not enabled or failed.
+	/// </summary>
+	/// <remarks>
+	/// The view is created lazily on first access and never executes code. It shares the lifetime of the run
+	/// result: dispose the <see cref="DriverRunResult"/> to release it.
+	/// </remarks>
+	public MetadataLoadContext? Metadata => Emitted?.Metadata;
+
+	/// <summary>
+	/// Gets the emitted assembly loaded within the metadata-only view, or <see langword="null"/> when
+	/// compilation to an assembly was not enabled or failed. Reflects over the assembly without executing code.
+	/// </summary>
+	public Assembly? MetadataAssembly => Emitted?.MetadataAssembly;
+}
 
 /// <summary>
 /// The result of a compilation run with analyzers applied, including the compilation and any diagnostics produced during compilation.

@@ -304,8 +304,7 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProviderTests
 
 		await Assert
 			.That(async () =>
-			{
-				_ = await ApplyCodeFixAsync(
+				await ApplyCodeFixAsync(
 					source,
 					new CodeFixTestOptions
 					{
@@ -313,8 +312,8 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProviderTests
 						AdditionalAssemblyTypes = [typeof(CodeWriter), typeof(GenerationSettings)],
 					},
 					cancellationToken
-				);
-			})
+				)
+			)
 			.Throws<InvalidOperationException>();
 	}
 

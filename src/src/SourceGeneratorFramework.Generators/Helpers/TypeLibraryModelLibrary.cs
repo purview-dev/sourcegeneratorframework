@@ -64,14 +64,14 @@ static class TypeLibraryModelLibrary
 			var isTypeIdentity = string.Equals(field.Type.Name, "TypeIdentity", StringComparison.Ordinal);
 			var isTypeReference = string.Equals(field.Type.Name, "TypeReference", StringComparison.Ordinal);
 			var documentation = ExtractDocumentation(field);
-			var includeInGetTypes = GetNamedArgument(typeRef, "IncludeInGetTypes", false);
+			var includeInGetTypes = GetIncludeInGetTypes(typeRef);
 
 			TypeLibraryMemberModel member;
 
 			if (isTypeReference)
 			{
 				var initializer = ReadInitializerExpression(field, cancellationToken);
-				if (initializer is null || field.DeclaredAccessibility != Microsoft.CodeAnalysis.Accessibility.Internal)
+				if (initializer is null || field.DeclaredAccessibility != Accessibility.Internal)
 				{
 					hasBlockingError = true;
 					continue;
@@ -94,7 +94,7 @@ static class TypeLibraryModelLibrary
 			{
 				// An initialised TypeIdentity follows the same rules as a TypeReference value member.
 				var initializer = ReadInitializerExpression(field, cancellationToken);
-				if (initializer is null || field.DeclaredAccessibility != Microsoft.CodeAnalysis.Accessibility.Internal)
+				if (initializer is null || field.DeclaredAccessibility != Accessibility.Internal)
 				{
 					hasBlockingError = true;
 					continue;
@@ -116,7 +116,7 @@ static class TypeLibraryModelLibrary
 			else if (isTypeIdentity)
 			{
 				// A plain TypeIdentity is a generation marker: private accessibility.
-				if (field.DeclaredAccessibility != Microsoft.CodeAnalysis.Accessibility.Private)
+				if (field.DeclaredAccessibility != Accessibility.Private)
 				{
 					hasBlockingError = true;
 					continue;
@@ -176,6 +176,31 @@ static class TypeLibraryModelLibrary
 		GetNamedArgument(typeRef, "Namespace", (string?)null)
 		?? GetConstructorArgument(typeRef, 0, (string?)null)
 		?? GetConstructorArgument(typeRef, 1, (string?)null);
+
+	/// <summary>
+	/// Resolves the <c>IncludeInGetTypes</c> flag from the named property, the named constructor argument,
+	/// or the positional <c>includeInGetTypes</c> constructor argument (the final parameter of either ctor).
+	/// </summary>
+	static bool GetIncludeInGetTypes(AttributeData typeRef)
+	{
+		var named =
+			GetNamedArgument(typeRef, "IncludeInGetTypes", (bool?)null)
+			?? GetNamedArgument(typeRef, "includeInGetTypes", (bool?)null);
+		if (named is not null)
+			return named.Value;
+
+		if (typeRef.AttributeConstructor is { } constructor)
+		{
+			for (var index = 0; index < constructor.Parameters.Length; index++)
+			{
+				if (constructor.Parameters[index].Name == "includeInGetTypes")
+					return index < typeRef.ConstructorArguments.Length
+						&& typeRef.ConstructorArguments[index].Value is true;
+			}
+		}
+
+		return false;
+	}
 
 	/// <summary>
 	/// Replicates the framework <c>PurviewTypeLibrary</c> nested namespace classes and their members into
@@ -311,6 +336,7 @@ static class TypeLibraryModelLibrary
 		string? inferredNamespace = null;
 		int? detectedArity;
 
+#pragma warning disable format
 		switch (typeArgument.Value)
 		{
 			case ITypeSymbol typeSymbol:
@@ -335,6 +361,7 @@ static class TypeLibraryModelLibrary
 				hasBlockingError = true;
 				return (string.Empty, string.Empty, 0);
 		}
+#pragma warning restore format
 
 		var resolvedNamespace =
 			namedNamespace ?? GetConstructorArgument(typeRef, 1, (string?)null) ?? inferredNamespace;
@@ -435,10 +462,14 @@ static class TypeLibraryModelLibrary
 			if (elements is null || elements.Count == 0)
 				return null;
 
-			return string.Join(
-				"\n",
-				elements.Select(static element => element.ToString(SaveOptions.DisableFormatting))
-			);
+			// Return the inner XML of the <member> element, preserving whitespace and formatting.
+			var result = string.Join(
+					"\n",
+					elements.Select(static element => element.ToString(SaveOptions.DisableFormatting))
+				)
+				.Trim();
+
+			return result.Length == 0 ? null : result;
 		}
 		catch
 		{
@@ -462,6 +493,7 @@ static class TypeLibraryModelLibrary
 					.WithTriviaFrom(node);
 			}
 
+			// If the identifier is not a standalone PurviewTypeLibrary, continue visiting its children.
 			return base.VisitIdentifierName(node);
 		}
 	}

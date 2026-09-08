@@ -131,15 +131,48 @@ imported). `await Assert.That(...)` is terminal and returns the value:
 
 - `HasGeneratedMethod` / `HasGeneratedMethodReturnType` / `HasGeneratedClass` / `HasGeneratedProperty` /
   `HasGeneratedField` / `HasGeneratedSyntaxTree` — return the syntax node; `HasGeneratedMethod(name, TypeReference[])`
-  matches parameter types.
+  matches parameter types. `HasGeneratedClass(name, arity)` (or a `TypeIdentity` with arity) matches a generic
+  type by its type-parameter count, so `new TypeIdentity("ResourceDefinition", ns, arity: 1)` finds
+  `ResourceDefinition<T>` without matching the non-generic `ResourceDefinition`.
 - `HasFixedMethod` — same for code-fix and refactoring results.
+- `HasPropertyOfType` / `HasFieldOfType` / `HasMethodOfType` / `HasConstructorOfType` / `HasAttributeOfType` /
+  `HasNestedType` — chain from a scoped `CodeQueryResult<T>` (for example the result of `HasGeneratedClass`) and
+  return the matched member. The node-producing assertions move the chain onto the matched node, so you can
+  append node-inspection assertions with `.And`:
+  ```csharp
+  var method = await Assert.That(query)
+      .HasGeneratedClass("Service")
+      .And.HasNestedType("Builder")
+      .And.WithAccessibility(Accessibility.Private)
+      .And.HasMethodOfType("Build", []);
+  ```
+- `WithAccessibility` / `WithGetterAccessibility` / `WithSetterAccessibility` / `WithBaseType` /
+  `WithGenericTypeParameter(s)` / `IsInNamespace` / `IsInGlobalNamespace` — node-inspection assertions that
+  keep the matched node on the chain. Accessibility resolves C# defaults (an unmodified nested type is
+  `Private`, a top-level type `Internal`, interface/enum members `Public`, and an accessor with no modifier
+  inherits its property's accessibility).
 - `HasDiagnostic` / `HasDiagnostics` / `HasNoDiagnostics` / `DoesNotHaveDiagnostic` / `HasNoErrorDiagnostics`.
 - `HasSymbol(TypeIdentity)` / `HasSymbol("Namespace.Type")`.
 - `GeneratesCode(expected)` / `ContainsGeneratedCode(expected)` (whitespace-flattened).
 
+The `CodeQuery` assertions operate on a `CodeQuery` directly, so they accept a query from any test result —
+`result.Generated()` for generated code, `result.Output()` for the whole compilation, or `result.FixedCode()`
+for fixed/refactored code. Convenience overloads on the test result types query the generated (or fixed) code
+for you.
+
+To assert a nullable expected type, use the test-only `query.MakeNullable(...)` extension: it resolves the
+annotation against the query's compilation and, unlike `TypeReference.Nullable()`/`TypeIdentity.MakeNullable()`,
+does not trigger the `PSGFR16` context-overload suggestion (tests have no generation context to pass).
+
 ```csharp
-MethodDeclarationSyntax method = await Assert.That(result).HasGeneratedMethod("DoWork", [intType, nullableInt]);
-await Assert.That(result).HasGeneratedSyntaxTree("Service.g.cs");
+var query = result.Generated();
+MethodDeclarationSyntax method = await Assert.That(query).HasGeneratedMethod("DoWork", [intType, nullableInt]);
+await Assert.That(query).HasGeneratedSyntaxTree("Service.g.cs");
+await Assert.That(result.FixedCode()).HasFixedMethod("DoWork");   // code-fix / refactor results
+
+// Scoped member chaining:
+CodeQueryResult<ClassDeclarationSyntax> attributeClass = await Assert.That(query).HasGeneratedClass(hostKitAttribute);
+await Assert.That(attributeClass).HasPropertyOfType("Name", query.MakeNullable(TypeLibrary.System.String));
 ```
 
 ## Incremental cache tests

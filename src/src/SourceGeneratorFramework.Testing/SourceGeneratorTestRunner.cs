@@ -76,14 +76,26 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 
 		Assembly? assembly = null;
 		ImmutableArray<Diagnostic> compilationDiagnostics = [];
+		EmittedAssembly? emitted = null;
 		if (options.CompileToAssembly)
-			(assembly, compilationDiagnostics) = CompileToAssembly(outputCompilation, cancellationToken);
+			emitted = CompileToAssembly(outputCompilation, cancellationToken);
+
+		if (emitted is not null)
+		{
+			assembly = emitted.Assembly;
+			compilationDiagnostics = emitted.Diagnostics;
+		}
+
+		var compilationResult = new CompilationRunResult(outputCompilation, assembly, compilationDiagnostics)
+		{
+			Emitted = emitted,
+		};
 
 		var excludedGeneratedSource = ExcludeGeneratedSources(result, options.ExcludeGeneratedSourceHintNames);
 
 		return new(
 			result,
-			new(outputCompilation, assembly, compilationDiagnostics),
+			compilationResult,
 			analyzerCompilationRun,
 			result.GeneratedTrees,
 			excludedGeneratedSource,
@@ -391,19 +403,15 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		}
 	}
 
-	static (Assembly?, ImmutableArray<Diagnostic>) CompileToAssembly(
-		Compilation compilation,
-		CancellationToken cancellationToken
-	)
+	static EmittedAssembly CompileToAssembly(Compilation compilation, CancellationToken cancellationToken)
 	{
-		MemoryStream assemblyStream = new();
+		using var assemblyStream = new MemoryStream();
 		var emitResult = compilation.Emit(assemblyStream, cancellationToken: cancellationToken);
 
-		if (!emitResult.Success)
-			return (null, emitResult.Diagnostics);
-
-		assemblyStream.Position = 0;
-		return (Assembly.Load(assemblyStream.ToArray()), emitResult.Diagnostics);
+		return new EmittedAssembly(emitResult.Success ? assemblyStream.ToArray() : null, compilation)
+		{
+			Diagnostics = emitResult.Diagnostics,
+		};
 	}
 
 	static ImmutableArray<SyntaxTree> ExcludeGeneratedSources(
