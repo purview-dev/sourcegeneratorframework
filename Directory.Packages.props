@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
 		<CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-		<RoslynCompilerVersion Condition="'$(RoslynCompilerVersion)' == ''">[4.13.0,)</RoslynCompilerVersion>
+		<RoslynCompilerVersion Condition="'$(RoslynCompilerVersion)' == ''">[5.9.0,)</RoslynCompilerVersion>
 		<RoslynAnalyzersVersion Condition="'$(RoslynAnalyzersVersion)' == ''">[5.9.0,)</RoslynAnalyzersVersion>
 		<TUnitVersion>[1.65.51,)</TUnitVersion>
 	</PropertyGroup>
@@ -17,7 +17,8 @@
 		<PackageVersion Include="TUnit.Assertions" Version="$(TUnitVersion)" />
 		<PackageVersion Include="TUnit.Mocks" Version="$(TUnitVersion)" />
 		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="[8.0.0,)" />
-		<PackageVersion Include="System.Collections.Immutable" Version="[8.0.0,)" />
+		<PackageVersion Include="System.Collections.Immutable" Version="[10.0.1,)" />
+		<PackageVersion Include="System.Reflection.MetadataLoadContext" Version="10.0.1" />
 		<PackageVersion Include="BenchmarkDotNet" Version="[0.14.0,)" />
 	</ItemGroup>
 </Project>

@@ -255,6 +255,7 @@ static class CodeWriterLiteralClassifier
 		if (trimmed.StartsWith("if (", StringComparison.Ordinal))
 			return isScopeForm ? "IfBlockScope" : "IfBlock";
 
+		// The structured CodeWriter API does not yet support preprocessor directives other than #if/#else/#endif and
 		return null;
 	}
 }

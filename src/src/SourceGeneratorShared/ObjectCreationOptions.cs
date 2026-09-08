@@ -29,6 +29,18 @@ public readonly record struct ObjectCreationOptions
 	}
 
 	/// <summary>
+	/// Creates a target-typed object-creation expression that omits the type, such as <c>new(...)</c>.
+	/// The emitted expression is valid only where the target type is known, such as an assignment to a
+	/// typed local, field, property, or parameter.
+	/// </summary>
+	/// <param name="arguments">The constructor arguments; strings are implicitly supported.</param>
+	public ObjectCreationOptions(params MethodCallArgumentOptions[] arguments)
+	{
+		Reference = TypeReference.Empty;
+		Arguments = arguments is null ? [] : [.. arguments];
+	}
+
+	/// <summary>
 	/// Gets the type to instantiate.
 	/// </summary>
 	public TypeReference Reference { get; }

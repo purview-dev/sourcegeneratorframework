@@ -51,6 +51,112 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task ExtensionBlockScope_WritesExtensionBlockWithReceiver()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		TypeIdentity receiver = new("PurviewTypeLibrary", "Purview.SourceGeneratorFramework");
+
+		// Act
+		using (writer.ExtensionBlockScope(receiver.AsTypeReference()))
+		{
+			writer.Property(
+				new("Name", TypeReference.Create<string>(), TypeDeclarationAccessibility.Public)
+				{
+					IsStatic = true,
+					ExpressionBody = "\"value\"",
+					IncludeGeneratedAttributes = false,
+				}
+			);
+		}
+
+		// Assert
+		var result = writer.ToString();
+		await Assert.That(result).Contains("extension(global::Purview.SourceGeneratorFramework.PurviewTypeLibrary)");
+		await Assert.That(result).Contains("\tpublic static string Name => \"value\";");
+		await Assert.That(result).Contains("}");
+	}
+
+	[Test]
+	public async Task ExtensionBlockScope_NestedReceiver_WritesNestedTypeLibraryPath()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var receiver = new TypeIdentity("PurviewTypeLibrary", "Purview.SourceGeneratorFramework")
+			.Nested("System")
+			.Nested("Diagnostics");
+
+		// Act
+		using (writer.ExtensionBlockScope(receiver.AsTypeReference()))
+			writer.Line("public static int Marker => 0;");
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.Contains("extension(global::Purview.SourceGeneratorFramework.PurviewTypeLibrary.System.Diagnostics)");
+	}
+
+	[Test]
+	public async Task ExtensionBlock_InvokesBodyCallback()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		TypeIdentity receiver = new("PurviewTypeLibrary", "Purview.SourceGeneratorFramework");
+
+		// Act
+		writer.ExtensionBlock(receiver.AsTypeReference(), body => body.Line("public static int Marker => 0;"));
+
+		// Assert
+		var result = writer.ToString();
+		await Assert.That(result).Contains("extension(global::Purview.SourceGeneratorFramework.PurviewTypeLibrary)");
+		await Assert.That(result).Contains("\tpublic static int Marker => 0;");
+	}
+
+	[Test]
+	public async Task ExtensionBlockScope_ComposedReceiver_Throws()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act / Assert
+		await Assert
+			.That(() =>
+				writer.ExtensionBlockScope(
+					new TypeIdentity("List", "System.Collections.Generic")
+						.MakeGeneric(new TypeIdentity("T", null))
+						.AsTypeReference()
+						.MakeArray()
+				)
+			)
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task ExtensionBlockScope_EmptyReceiver_IsNoOp()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		using (writer.ExtensionBlockScope(TypeReference.Empty))
+			writer.Line("public int P { get; set; }");
+
+		// Assert
+		await Assert.That(writer.ToString()).Contains("public int P { get; set; }");
+		await Assert.That(writer.ToString()).DoesNotContain("extension(");
+	}
+
+	[Test]
+	public async Task ExtensionBlockScope_NullReceiver_Throws()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act / Assert
+		await Assert.That(() => writer.ExtensionBlockScope(null!)).Throws<ArgumentNullException>();
+	}
+
+	[Test]
 	public async Task Line_AppendsLineWithIndent()
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -399,6 +505,179 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task Class_WithoutBody_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.Class(new TypeDeclarationOptions("C"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("public sealed partial class C;\n");
+	}
+
+	[Test]
+	public async Task Class_WithoutBody_WithBaseType_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.Class(new TypeDeclarationOptions("C") { BaseType = Type("Base") });
+
+		await Assert.That(writer.ToString()).IsEqualTo("public sealed partial class C : Base;\n");
+	}
+
+	[Test]
+	public async Task RecordClass_WithoutBody_WithPrimaryConstructor_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.RecordClass(
+			new TypeDeclarationOptions("R")
+			{
+				Accessibility = TypeDeclarationAccessibility.Public,
+				IsPartial = false,
+				IsSealed = false,
+				PrimaryConstructorParameters = [new ParameterDeclarationOptions("value", Type("string"))],
+			}
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("public record class R(string value);\n");
+	}
+
+	[Test]
+	public async Task Interface_WithoutBody_WritesSemicolonTerminatedDeclaration()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+
+		writer.Interface(
+			new TypeDeclarationOptions("IService") { Accessibility = TypeDeclarationAccessibility.Public }
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("public partial interface IService;\n");
+	}
+
+	[Test]
+	public async Task TypeDeclarationOptions_NullableTypeIdentity_UsesIdentityName()
+	{
+		TypeIdentity? identity = new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace");
+
+		var declaration = new TypeDeclarationOptions(identity, TypeDeclarationAccessibility.Public);
+
+		await Assert.That(declaration.Name).IsEqualTo("TestingHostKit");
+		await Assert.That(declaration.Name).IsNotEqualTo("global::Testing.HostKitNamespace.TestingHostKit");
+	}
+
+	[Test]
+	public async Task BaseType_ConstructedArityTwoGeneric_RendersAllArguments()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace"),
+			new TypeIdentity("DefaultAspireResource", "Purview.Aspire.ResourceKit")
+		);
+
+		var declaration = new TypeDeclarationOptions("RedisResourceKit")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsPartial = true,
+			IsSealed = true,
+			BaseType = resourceKitBase,
+		};
+
+		using (writer.ClassScope(declaration))
+		{
+			// Empty body.
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.Contains(
+				": global::Purview.Aspire.ResourceKit.ResourceKitBase<global::Testing.HostKitNamespace.TestingHostKit, global::Purview.Aspire.ResourceKit.DefaultAspireResource>"
+			);
+	}
+
+	[Test]
+	public async Task BaseType_NestedConstructedGenericArgument_RendersAndDoesNotOverflow()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1).MakeGeneric(
+				new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace")
+			),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		var declaration = new TypeDeclarationOptions("RedisResourceKit")
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			IsPartial = true,
+			IsSealed = true,
+			BaseType = resourceKitBase,
+		};
+
+		using (writer.ClassScope(declaration))
+		{
+			// Empty body.
+		}
+
+		await Assert
+			.That(writer.ToString())
+			.Contains(
+				": global::Purview.Aspire.ResourceKit.ResourceKitBase<global::Purview.Aspire.ResourceKit.HostKitBase<global::Testing.HostKitNamespace.TestingHostKit>, global::Testing.RedisResourceKit>"
+			);
+	}
+
+	[Test]
+	public async Task BaseType_OpenGeneric_ThrowsValidationError()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new TypeDeclarationOptions("C")
+		{
+			BaseType = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2),
+		};
+
+		await Assert.That(() => writer.ClassScope(declaration)).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task MakeGeneric_ArityMismatch_Throws()
+	{
+		var open = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2);
+
+		await Assert
+			.That(() => open.MakeGeneric(new TypeIdentity("DefaultAspireResource", "Purview.Aspire.ResourceKit")))
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task GenerateResourceKit_OpenGenericTypeArgument_ThrowsClearError()
+	{
+		var writer = CodeWriter.CreateTestWriter();
+		var resourceKit = new TypeIdentity("RedisResourceKit", "Testing");
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			resourceKit
+		);
+		var resourceDefinitionAttribute = new AttributeDeclarationOptions(
+			new TypeIdentity("ResourceDefinitionAttribute", "Purview.Aspire.ResourceKit")
+		);
+
+		await Assert
+			.That(() =>
+				writer
+					.FileScopedNamespace(resourceKit)
+					.Class(
+						new(resourceKit, TypeDeclarationAccessibility.Public)
+						{
+							BaseType = resourceKitBase,
+							IsPartial = true,
+							Attributes = [resourceDefinitionAttribute],
+						},
+						_ => { }
+					)
+			)
+			.Throws<ArgumentException>();
+	}
+
+	[Test]
 	public async Task RecordStruct_WithOptions_WritesReadonlyRecordStruct()
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -706,7 +985,8 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false)
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
 					+ "public enum Status : byte\n{\n\tNone = 0,\n\tReady = 1,\n}\n"
 			);
 	}
@@ -825,14 +1105,60 @@ public class CodeWriterTests
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false)
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
 					+ "public enum Status\n"
 					+ "{\n"
 					+ "\t/// <summary>No status has been selected.</summary>\n"
 					+ "\t[Obsolete]\n"
 					+ "\tNone = 0,\n"
+					+ "\n"
 					+ "\tReady = 1 << 0,\n"
+					+ "\n"
 					+ "\tUnknown,\n"
+					+ "}\n"
+			);
+	}
+
+	[Test]
+	public async Task Enum_WithEmbeddedAttributeDisabled_OmitsEmbeddedAttribute()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Enum(
+			new TypeDeclarationOptions("Status") { IncludeEmbeddedAttribute = false },
+			body => body.EnumField(new EnumFieldDeclarationOptions("Ready", 1))
+		);
+
+		await Assert.That(writer.ToString()).DoesNotContain("[global::Microsoft.CodeAnalysis.Embedded]");
+	}
+
+	[Test]
+	public async Task Enum_WithFieldSummaries_SeparatesFieldsWithBlankLines()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new TypeDeclarationOptions("Status") { Accessibility = TypeDeclarationAccessibility.Public };
+
+		// Act
+		writer.Enum(
+			declaration,
+			new EnumFieldDeclarationOptions("None", 0),
+			new EnumFieldDeclarationOptions("Ready", 1) { XmlSummary = ["The service is ready."] }
+		);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n"
+					+ "{\n"
+					+ "\tNone = 0,\n"
+					+ "\n"
+					+ "\t/// <summary>The service is ready.</summary>\n"
+					+ "\tReady = 1,\n"
 					+ "}\n"
 			);
 	}
@@ -1857,6 +2183,60 @@ public class CodeWriterTests
 	}
 
 	[Test]
+	public async Task MethodCallOn_WithGenericArguments_WritesGenericInvocation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.MethodCallOn("builder.Services", "AddOptions", genericArguments: [Type("Options")]);
+
+		await Assert.That(writer.ToString()).IsEqualTo("builder.Services.AddOptions<Options>();\n");
+	}
+
+	[Test]
+	public async Task MethodCallOn_WithGenericArgumentsAndArguments_WritesGenericInvocation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.MethodCallOn("service", "Add", ["value"], genericArguments: [Type("Options")]);
+
+		await Assert.That(writer.ToString()).IsEqualTo("service.Add<Options>(value);\n");
+	}
+
+	[Test]
+	public async Task AwaitedMethodCallOn_WithGenericArguments_WritesAwaitAndGenericInvocation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.AwaitedMethodCallOn("service", "LoadAsync", ["token"], genericArguments: [Type("Options")]);
+
+		await Assert.That(writer.ToString()).IsEqualTo("await service.LoadAsync<Options>(token);\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithMethodCallChainRootGenericArguments_WritesChainedGenericInvocation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment(
+			"var",
+			"optionsBuilder",
+			expression =>
+				expression.MethodCallChain(
+					"builder.Services.AddOptions",
+					[],
+					chain => chain.Method("BindConfiguration", ["\"Purview.SectionName\""]),
+					genericArguments: [Type("Options")]
+				)
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"var optionsBuilder = builder.Services.AddOptions<Options>().BindConfiguration(\"Purview.SectionName\");\n"
+			);
+	}
+
+	[Test]
 	public async Task MethodCallChain_WritesChainedInvocations()
 	{
 		var writer = CodeWriterFactory.ForTests();
@@ -2781,7 +3161,7 @@ public class CodeWriterTests
 
 		await Assert
 			.That(writer.ToString())
-			.IsEqualTo("var value = new()\n\t{\n\t\tX = 1,\n\t\tY = 2,\n\t\tZ = 3\n\t};\n");
+			.IsEqualTo("var value = new()\n" + "{\n" + "\tX = 1,\n" + "\tY = 2,\n" + "\tZ = 3\n" + "};\n");
 	}
 
 	[Test]
@@ -3272,6 +3652,187 @@ partial void Apply()
 
 		// Assert
 		await Assert.That(writer.ToString()).IsEqualTo("return new Order()!;\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithNewExpressionCallback_WritesConstruction()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.Assignment("var hostKit", expression => expression.New("HostKit", "onBuilt", "onConfigured"));
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("var hostKit = new HostKit(onBuilt, onConfigured);\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithNewExpressionCallbackAndTypeOnly_WritesEmptyConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment("var order", expression => expression.New("Order"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("var order = new Order();\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithTargetTypedNewExpressionCallback_WritesTargetTypedConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment("HostKit", "hostKit", expression => expression.New(["onBuilt", "onConfigured"]));
+
+		await Assert.That(writer.ToString()).IsEqualTo("HostKit hostKit = new(onBuilt, onConfigured);\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithEmptyTargetTypedNewExpressionCallback_WritesEmptyTargetTypedConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment("Order", "order", expression => expression.New());
+
+		await Assert.That(writer.ToString()).IsEqualTo("Order order = new();\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithNewExpressionCallbackAndTypeReference_WritesConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment("var order", expression => expression.New(Type("global::Testing.Order"), "customerId"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("var order = new global::Testing.Order(customerId);\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithNewExpressionCallbackAndStructuredArguments_WritesModifiersAndNamedArguments()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment(
+			"var handler",
+			expression =>
+				expression.New(
+					"HostKit",
+					[
+						new MethodCallArgumentOptions("onBuilt"),
+						new MethodCallArgumentOptions("onConfigured") { Name = "configured" },
+						new MethodCallArgumentOptions("options", ParameterModifier.In),
+					]
+				)
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("var handler = new HostKit(onBuilt, configured: onConfigured, in options);\n");
+	}
+
+	[Test]
+	public async Task Return_WithNewExpressionCallback_WritesReturnConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Return(expression => expression.New("Order", "customerId"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("return new Order(customerId);\n");
+	}
+
+	[Test]
+	public async Task New_GivenWhitespaceType_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert.That(() => writer.New("   ", "value")).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task New_GivenEmptyTypeReference_Throws()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		await Assert.That(() => writer.New(TypeReference.Empty, "value")).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task Assignment_WithTargetTypedObjectCreationOptions_WritesTargetTypedConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment("var", "hostKit", new ObjectCreationOptions("onBuilt", "onConfigured"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("var hostKit = new(onBuilt, onConfigured);\n");
+	}
+
+	[Test]
+	public async Task Return_WithTargetTypedObjectCreationOptions_WritesTargetTypedConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Return(new ObjectCreationOptions("customerId"));
+
+		await Assert.That(writer.ToString()).IsEqualTo("return new(customerId);\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithTargetTypedObjectCreationOptionsAndInitializer_WritesAnonymousTypeInitializer()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Assignment(
+			"var",
+			"aggregate",
+			new ObjectCreationOptions { InitializerMembers = [new("A", "1"), new("B", "2")] }
+		);
+
+		await Assert.That(writer.ToString()).IsEqualTo("var aggregate = new { A = 1, B = 2, };\n");
+	}
+
+	[Test]
+	public async Task Return_WithNewExpressionCallbackAndSeparateLineArguments_WritesMultilineConstruction()
+	{
+		var writer = CodeWriterFactory.ForTests();
+
+		writer.Return(expression =>
+			expression.New(
+				"Order",
+				[new MethodCallArgumentOptions("aParameterNameThatForcesTheArgumentsOntoTheirOwnLine")],
+				writeArgumentsOnSeparateLines: true
+			)
+		);
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo("return new Order(\n" + "\taParameterNameThatForcesTheArgumentsOntoTheirOwnLine\n" + ");\n");
+	}
+
+	[Test]
+	public async Task Assignment_WithNewExpressionCallbackAndSeparateLineArguments_WritesNestedIndentation()
+	{
+		var writer = CodeWriterFactory.ForTests();
+		writer.Indent();
+
+		writer.Assignment(
+			"var",
+			"optionsBuilder",
+			expression =>
+				expression.New(
+					"Order",
+					[new MethodCallArgumentOptions("aParameterNameThatForcesTheArgumentsOntoTheirOwnLine")],
+					writeArgumentsOnSeparateLines: true
+				)
+		);
+		writer.Unindent();
+
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(
+				"\tvar optionsBuilder = new Order(\n"
+					+ "\t\taParameterNameThatForcesTheArgumentsOntoTheirOwnLine\n"
+					+ "\t);\n"
+			);
 	}
 
 	[Test]
@@ -4312,7 +4873,9 @@ partial void Apply()
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false) + "public enum Status\n{\n\tReady = 1,\n}\n"
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n{\n\tReady = 1,\n}\n"
 			);
 	}
 
@@ -4329,8 +4892,9 @@ partial void Apply()
 		await Assert
 			.That(writer.ToString())
 			.IsEqualTo(
-				GeneratedAttributes(includeCoverageExclusion: false)
-					+ "public enum Status\n{\n\tReady = 1,\n\tProcessing = 2,\n}\n"
+				"[global::Microsoft.CodeAnalysis.Embedded]\n"
+					+ GeneratedAttributes(includeCoverageExclusion: false)
+					+ "public enum Status\n{\n\tReady = 1,\n\n\tProcessing = 2,\n}\n"
 			);
 	}
 
@@ -4951,5 +5515,79 @@ partial void Apply()
 					+ "namespace Purview.Telemetry;\n"
 					+ "\n"
 			);
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Null literal
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Property_GivenNullInitializer_WritesNull()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		{
+			Accessibility = TypeDeclarationAccessibility.Public,
+			HasSetter = true,
+			IsInitOnly = true,
+			Initializer = TypeIdentity.Null,
+		};
+
+		// Act
+		writer.Property(declaration);
+
+		// Assert
+		await Assert
+			.That(writer.ToString())
+			.IsEqualTo(GeneratedAttributes() + "public string Name { get; init; } = null;\n");
+	}
+
+	[Test]
+	public async Task Return_GivenNullExpression_WritesNull()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act
+		writer.Return(TypeIdentity.Null);
+
+		// Assert
+		await Assert.That(writer.ToString()).IsEqualTo("return null;\n");
+	}
+
+	[Test]
+	public async Task Field_GivenNullLiteralAsType_Throws()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+		var declaration = new FieldDeclarationOptions("_value", TypeReference.Null)
+		{
+			Accessibility = TypeDeclarationAccessibility.Private,
+		};
+
+		// Act / Assert
+		await Assert.That(() => writer.Field(declaration)).Throws<ArgumentException>();
+	}
+
+	[Test]
+	public async Task Method_GivenNullParameterType_Throws()
+	{
+		// Arrange
+		var writer = CodeWriterFactory.ForTests();
+
+		// Act / Assert
+		await Assert
+			.That(() =>
+				writer.Method(
+					new MethodDeclarationOptions("M", Type("void"))
+					{
+						Accessibility = TypeDeclarationAccessibility.Public,
+						Parameters = [new("value", TypeReference.Null)],
+					},
+					_ => { }
+				)
+			)
+			.Throws<ArgumentException>();
 	}
 }

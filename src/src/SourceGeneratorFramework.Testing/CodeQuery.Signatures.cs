@@ -77,14 +77,15 @@ public sealed partial class CodeQuery
 
 /// <summary>
 /// Signature inspection helpers for members obtained from a <see cref="CodeQuery"/>. These support chaining
-/// from a member or type declaration, for example <c>query.GetClass("C").HasMethod(query, "M", intType)</c>.
+/// from a <see cref="CodeQueryResult{T}"/>, for example <c>query.GetClass("C").HasMethod("M", intType)</c>.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class CodeQuerySignatureExtensions
 {
 	/// <summary>
-	/// Creates a nested query scoped to this node, enabling chained searches such as
-	/// <c>query.GetClass("C").Query(query).GetMethod("M")</c>.
+	/// Creates a nested query scoped to this node, for example <c>node.Query(parent)</c> when a raw syntax
+	/// node is at hand. For <see cref="CodeQueryResult{T}"/> results, use the <c>Query</c> property or the
+	/// implicit conversion to a scoped <see cref="CodeQuery"/> instead.
 	/// </summary>
 	public static CodeQuery Query(this SyntaxNode node, CodeQuery parent)
 	{
@@ -101,69 +102,46 @@ public static class CodeQuerySignatureExtensions
 	/// Determines whether the method's or constructor's parameters match the given types, resolved through the
 	/// query's compilation.
 	/// </summary>
-	public static bool HasParameters(
-		this BaseMethodDeclarationSyntax method,
-		CodeQuery query,
-		params TypeReference[] expected
-	)
+	public static bool HasParameters<T>(this CodeQueryResult<T> method, params TypeReference[] expected)
+		where T : BaseMethodDeclarationSyntax
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
-		if (query is null)
-			throw new ArgumentNullException(nameof(query));
 
 		// Delegate to the query's HasParameters method, which handles the parameter count and type matching.
-		return query.HasParameters(method, expected);
+		return method.Query.HasParameters(method.Node, expected);
 	}
 
 	/// <summary>
 	/// Determines whether the method's return type matches the given reference, resolved through the query's
 	/// compilation.
 	/// </summary>
-	public static bool HasReturnType(this MethodDeclarationSyntax method, CodeQuery query, TypeReference returnType)
+	public static bool HasReturnType<T>(this CodeQueryResult<T> method, TypeReference returnType)
+		where T : BaseMethodDeclarationSyntax
 	{
 		if (method is null)
 			throw new ArgumentNullException(nameof(method));
-		if (query is null)
-			throw new ArgumentNullException(nameof(query));
 		if (returnType is null)
 			throw new ArgumentNullException(nameof(returnType));
 
 		// If the method has no return type (e.g., it's a constructor), it cannot match any reference.
-		return method.ReturnType is { } returnTypeSyntax && query.Matches(returnTypeSyntax, returnType);
+		return method.Node is MethodDeclarationSyntax { ReturnType: { } returnTypeSyntax }
+			&& method.Query.Matches(returnTypeSyntax, returnType);
 	}
 
 	/// <summary>
-	/// Determines whether the property's type matches the given reference, resolved through the query's
-	/// compilation.
+	/// Determines whether the property's or indexer's type matches the given reference, resolved through the
+	/// query's compilation.
 	/// </summary>
-	public static bool HasType(this PropertyDeclarationSyntax property, CodeQuery query, TypeReference propertyType)
+	public static bool HasType<T>(this CodeQueryResult<T> node, TypeReference type)
+		where T : BasePropertyDeclarationSyntax
 	{
-		if (property is null)
-			throw new ArgumentNullException(nameof(property));
-		if (query is null)
-			throw new ArgumentNullException(nameof(query));
-		if (propertyType is null)
-			throw new ArgumentNullException(nameof(propertyType));
+		if (node is null)
+			throw new ArgumentNullException(nameof(node));
+		if (type is null)
+			throw new ArgumentNullException(nameof(type));
 
 		// The property type is always non-nullable in C# syntax, so we can directly match it with the expected type reference.
-		return query.Matches(property.Type, propertyType);
-	}
-
-	/// <summary>
-	/// Determines whether the indexer's type matches the given reference, resolved through the query's
-	/// compilation.
-	/// </summary>
-	public static bool HasType(this IndexerDeclarationSyntax indexer, CodeQuery query, TypeReference indexerType)
-	{
-		if (indexer is null)
-			throw new ArgumentNullException(nameof(indexer));
-		if (query is null)
-			throw new ArgumentNullException(nameof(query));
-		if (indexerType is null)
-			throw new ArgumentNullException(nameof(indexerType));
-
-		// The indexer type is always non-nullable in C# syntax, so we can directly match it with the expected type reference.
-		return query.Matches(indexer.Type, indexerType);
+		return node.Query.Matches(node.Node.Type, type);
 	}
 }

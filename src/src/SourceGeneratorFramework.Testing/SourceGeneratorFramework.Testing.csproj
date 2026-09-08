@@ -20,6 +20,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+		<PackageReference Include="System.Reflection.MetadataLoadContext" />
 	</ItemGroup>
 
 	<Import Project="..\SourceGeneratorShared\SourceGeneratorShared.Pack.targets" />

@@ -15,9 +15,12 @@ public sealed partial class CodeQuery
 	/// its parameter types.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No operator matched.</exception>
-	public OperatorDeclarationSyntax GetOperator(string operatorToken, params TypeReference[]? parameters) =>
+	public CodeQueryResult<OperatorDeclarationSyntax> GetOperator(
+		string operatorToken,
+		params TypeReference[]? parameters
+	) =>
 		TryGetOperator(operatorToken, out var @operator, parameters)
-			? @operator!
+			? new(this, @operator!)
 			: throw new SyntaxNotFoundException(
 				$"No operator '{operatorToken}' was found in the {ScopeDescription()}{(parameters is { Length: > 0 } ? " with the specified parameters" : "")}."
 			);
@@ -74,12 +77,12 @@ public sealed partial class CodeQuery
 	/// <c>explicit</c>, optionally matching its parameter type.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No conversion operator matched.</exception>
-	public ConversionOperatorDeclarationSyntax GetConversionOperator(
+	public CodeQueryResult<ConversionOperatorDeclarationSyntax> GetConversionOperator(
 		string keyword,
 		params TypeReference[]? parameters
 	) =>
 		TryGetConversionOperator(keyword, out var conversion, parameters)
-			? conversion!
+			? new(this, conversion!)
 			: throw new SyntaxNotFoundException(
 				$"No '{keyword}' conversion operator was found in the {ScopeDescription()}{(parameters is { Length: > 0 } ? " with the specified parameters" : "")}."
 			);
@@ -139,9 +142,9 @@ public sealed partial class CodeQuery
 	/// Gets an indexer declaration whose parameters match the given types.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No indexer matched.</exception>
-	public IndexerDeclarationSyntax GetIndexer(params TypeReference[] parameters) =>
+	public CodeQueryResult<IndexerDeclarationSyntax> GetIndexer(params TypeReference[] parameters) =>
 		TryGetIndexer(out var indexer, parameters)
-			? indexer!
+			? new(this, indexer!)
 			: throw new SyntaxNotFoundException($"No indexer was found in the {ScopeDescription()}.");
 
 	/// <summary>
@@ -195,14 +198,18 @@ public sealed partial class CodeQuery
 	/// <summary>
 	/// Gets all attribute applications on or within the given node.
 	/// </summary>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static")]
-	public ImmutableArray<AttributeSyntax> GetAttributes(SyntaxNode node)
+	public ImmutableArray<CodeQueryResult<AttributeSyntax>> GetAttributes(SyntaxNode node)
 	{
 		if (node is null)
 			throw new ArgumentNullException(nameof(node));
 
 		// Note: This intentionally returns attributes on the node itself and any nested nodes, such as parameters.
-		return [.. node.DescendantNodes().OfType<AttributeSyntax>()];
+		return
+		[
+			.. node.DescendantNodes()
+				.OfType<AttributeSyntax>()
+				.Select(attribute => new CodeQueryResult<AttributeSyntax>(this, attribute)),
+		];
 	}
 
 	/// <summary>
@@ -234,8 +241,7 @@ public sealed partial class CodeQuery
 	/// <remarks>
 	/// The name may be supplied with or without the <c>Attribute</c> suffix.
 	/// </remarks>
-	[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static")]
-	public AttributeSyntax? GetAttribute(SyntaxNode node, string name)
+	public CodeQueryResult<AttributeSyntax>? GetAttribute(SyntaxNode node, string name)
 	{
 		if (node is null)
 			throw new ArgumentNullException(nameof(node));
@@ -245,7 +251,7 @@ public sealed partial class CodeQuery
 		foreach (var attribute in node.DescendantNodes().OfType<AttributeSyntax>())
 		{
 			if (MatchesAttributeName(attribute, name))
-				return attribute;
+				return new(this, attribute);
 		}
 
 		return null;

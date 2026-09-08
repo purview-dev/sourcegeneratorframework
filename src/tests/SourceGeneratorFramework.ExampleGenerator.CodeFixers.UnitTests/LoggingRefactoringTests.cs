@@ -33,8 +33,8 @@ public class LoggingRefactoringTests : TUnitRefactoringTestBase<LoggingRefactori
 		await Assert.That(fixedSource).Contains("[Debug]");
 
 		var method = result.FixedCode().GetMethod("Process");
-		await Assert.That(method.AttributeLists).IsNotEmpty();
-		await Assert.That(method.AttributeLists[0].ToString()).Contains("Debug");
+		await Assert.That(method.Node.AttributeLists).IsNotEmpty();
+		await Assert.That(method.Node.AttributeLists[0].ToString()).Contains("Debug");
 	}
 
 	[Test]

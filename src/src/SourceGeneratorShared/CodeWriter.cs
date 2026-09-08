@@ -470,6 +470,56 @@ public sealed partial class CodeWriter
 	public BlockScope OpenBlockScope(string? header = null) => OpenDelimitedBlockScope(header, "{", "}");
 
 	/// <summary>
+	/// Opens a C# 14 extension-member block for the specified receiver type.
+	/// </summary>
+	/// <param name="receiver">The plain named type being extended, such as the framework <c>TypeLibrary</c>.</param>
+	/// <returns>The extension block body scope.</returns>
+	/// <remarks>
+	/// The receiver must be a plain named type — composed references (arrays, pointers, nullable
+	/// annotations, type parameters and <see langword="dynamic"/>) and the null literal are rejected.
+	/// </remarks>
+	/// <example><code>using (writer.ExtensionBlockScope(new TypeIdentity("PurviewTypeLibrary", "Purview.SourceGeneratorFramework").AsTypeReference()))
+	/// 	writer.Line("public static string Name => \"value\";");</code></example>
+	public BlockScope ExtensionBlockScope(TypeReference receiver)
+	{
+		if (receiver is null)
+			throw new ArgumentNullException(nameof(receiver));
+
+		if (receiver.IsEmpty)
+			return default;
+
+		if (!receiver.IsPlainNamedType || receiver.IsNullLiteral)
+			throw new ArgumentException("An extension block receiver must be a plain named type.", nameof(receiver));
+
+		Write("extension(");
+		Type(receiver);
+		Write(")");
+		EnsureNewLine();
+		Line("{");
+		Indent();
+
+		return TrackOpenBlockScope("extension(...)", "}");
+	}
+
+	/// <summary>
+	/// Writes a complete C# 14 extension-member block and invokes a callback for its body.
+	/// </summary>
+	/// <param name="receiver">The plain named type being extended.</param>
+	/// <param name="bodyWriter">The action that writes the extension block body.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.ExtensionBlock(new TypeIdentity("PurviewTypeLibrary", "Purview.SourceGeneratorFramework").AsTypeReference(), body =&gt; body.Line("public static string Name => \"value\";"));</code></example>
+	public CodeWriter ExtensionBlock(TypeReference receiver, Action<CodeWriter> bodyWriter)
+	{
+		if (bodyWriter is null)
+			throw new ArgumentNullException(nameof(bodyWriter));
+
+		using (ExtensionBlockScope(receiver))
+			bodyWriter(this);
+
+		return this;
+	}
+
+	/// <summary>
 	/// Writes a complete block and invokes a callback for its body.
 	/// </summary>
 	/// <example><code>writer.OpenBlock("if (enabled)", body =&gt; body.Line("Run();"));</code></example>
@@ -791,7 +841,7 @@ public sealed partial class CodeWriter
 	/// <returns>
 	/// The operator body scope, or an empty scope when an expression-bodied operator was emitted.
 	/// </returns>
-	/// <example><code>using (writer.OperatorScope(new OperatorDeclarationOptions("==", TypeLibrary.System.Boolean, left, right))) writer.Line("return left.Equals(right);");</code></example>
+	/// <example><code>using (writer.OperatorScope(new OperatorDeclarationOptions("==", PurviewTypeLibrary.System.Boolean, left, right))) writer.Line("return left.Equals(right);");</code></example>
 	public BlockScope OperatorScope(OperatorDeclarationOptions declaration)
 	{
 		if (declaration.ReturnType.IsEmpty)
@@ -852,7 +902,7 @@ public sealed partial class CodeWriter
 	/// <param name="writeBody">The action that writes the operator body.</param>
 	/// <returns>The current writer.</returns>
 	/// <exception cref="ArgumentException">The operator has an expression body.</exception>
-	/// <example><code>writer.Operator(new OperatorDeclarationOptions("==", TypeLibrary.System.Boolean, left, right), body =&gt; body.Line("return left.Equals(right);"));</code></example>
+	/// <example><code>writer.Operator(new OperatorDeclarationOptions("==", PurviewTypeLibrary.System.Boolean, left, right), body =&gt; body.Line("return left.Equals(right);"));</code></example>
 	public CodeWriter Operator(OperatorDeclarationOptions declaration, Action<CodeWriter> writeBody)
 	{
 		if (writeBody is null)
@@ -1405,8 +1455,10 @@ public sealed partial class CodeWriter
 	{
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
+
 		using (BlockNamespaceScope(namespaceName))
 			bodyWriter(this);
+
 		return this;
 	}
 
@@ -1462,6 +1514,17 @@ public sealed partial class CodeWriter
 
 		return this;
 	}
+
+	/// <summary>
+	/// Writes an empty class declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The class declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Class(new TypeDeclarationOptions("C")); // public sealed partial class C;</code></example>
+	public CodeWriter Class(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.Class });
 
 	/// <summary>
 	/// Writes an attribute class with an <see cref="AttributeUsageAttribute"/> declaration.
@@ -1561,6 +1624,17 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty struct declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The struct declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Struct(new TypeDeclarationOptions("Value")); // public sealed partial struct Value;</code></example>
+	public CodeWriter Struct(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.Struct });
+
+	/// <summary>
 	/// Writes a record class declaration from structured options and returns its body scope.
 	/// </summary>
 	/// <param name="declaration">The record class declaration options.</param>
@@ -1590,6 +1664,17 @@ public sealed partial class CodeWriter
 
 		return this;
 	}
+
+	/// <summary>
+	/// Writes an empty record class declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The record class declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.RecordClass(new TypeDeclarationOptions("Model")); // public sealed partial record Model;</code></example>
+	public CodeWriter RecordClass(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.RecordClass });
 
 	/// <summary>
 	/// Writes a record struct declaration from structured options and returns its body scope.
@@ -1623,6 +1708,17 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
+	/// Writes an empty record struct declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The record struct declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.RecordStruct(new TypeDeclarationOptions("Value")); // public readonly partial record struct Value;</code></example>
+	public CodeWriter RecordStruct(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.RecordStruct });
+
+	/// <summary>
 	/// Writes an interface declaration and returns its body scope.
 	/// </summary>
 	/// <example><code>using (writer.InterfaceScope(new TypeDeclarationOptions("IService"))) { }</code></example>
@@ -1645,13 +1741,31 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes an enum declaration and returns its body scope.
+	/// Writes an empty interface declaration, terminated with a semicolon instead of a body.
+	/// </summary>
+	/// <param name="declaration">The interface declaration options.</param>
+	/// <returns>The current writer.</returns>
+	/// <example><code>writer.Interface(new TypeDeclarationOptions("IService")); // public partial interface IService;</code></example>
+	public CodeWriter Interface(TypeDeclarationOptions declaration) =>
+		declaration is null
+			? throw new ArgumentNullException(nameof(declaration))
+			: TypeDeclaration(declaration with { Kind = TypeDeclarationKind.Interface });
+
+	/// <summary>
+	/// Writes an enum declaration and returns its body scope. The enum is emitted with the
+	/// <see cref="Microsoft.CodeAnalysis.EmbeddedAttribute"/> by default.
 	/// </summary>
 	/// <example><code>using (writer.EnumScope(new TypeDeclarationOptions("Status"))) { }</code></example>
 	public BlockScope EnumScope(TypeDeclarationOptions declaration) =>
 		declaration is null
 			? throw new ArgumentNullException(nameof(declaration))
-			: TypeScope(declaration with { Kind = TypeDeclarationKind.Enum });
+			: TypeScope(
+				declaration with
+				{
+					Kind = TypeDeclarationKind.Enum,
+					IncludeEmbeddedAttribute = declaration.IncludeEmbeddedAttribute ?? true,
+				}
+			);
 
 	/// <summary>
 	/// Writes an enum declaration and invokes a callback for its body.
@@ -1695,7 +1809,8 @@ public sealed partial class CodeWriter
 	}
 
 	/// <summary>
-	/// Writes a field in an enum declaration.
+	/// Writes a field in an enum declaration. Consecutive fields are separated by a blank line, so
+	/// XML summaries and attributes remain readable.
 	/// </summary>
 	/// <param name="declaration">The enum field declaration options.</param>
 	/// <returns>The current writer.</returns>
@@ -1703,6 +1818,7 @@ public sealed partial class CodeWriter
 	public CodeWriter EnumField(EnumFieldDeclarationOptions declaration)
 	{
 		ValidateEnumFieldDeclaration(declaration);
+		BeginWrittenItem(WrittenItemKind.EnumField);
 		if (!declaration.XmlSummary.IsDefaultOrEmpty)
 			XmlSummary(declaration.XmlSummary);
 		Attributes(declaration.Attributes);
@@ -1715,7 +1831,9 @@ public sealed partial class CodeWriter
 					?? Convert.ToString(declaration.FieldValue, CultureInfo.InvariantCulture)
 			);
 		}
-		return Line(",");
+		Line(",");
+		CompleteWrittenItem(WrittenItemKind.EnumField, _indentLevel);
+		return this;
 	}
 
 	void XmlSummary(ImmutableArray<string> summary)
@@ -1755,6 +1873,48 @@ public sealed partial class CodeWriter
 		if (declaration is null)
 			throw new ArgumentNullException(nameof(declaration));
 
+		if (!WriteTypeDeclarationHeader(declaration))
+			return default;
+
+		NewLine();
+		GenericConstraints(declaration.GenericTypes);
+
+		return OpenBlockScope(WrittenItemKind.Type);
+	}
+
+	/// <summary>
+	/// Writes a structured type declaration with an empty body, terminating it with a semicolon instead of
+	/// opening a block. Produces declarations such as <c>public sealed partial class C;</c> or, with a primary
+	/// constructor, <c>public sealed class C(string value);</c>. Valid for classes, structs, records and
+	/// interfaces; delegates always terminate with a semicolon, and enums require a body.
+	/// </summary>
+	/// <param name="declaration">The structured type declaration options.</param>
+	/// <returns>The current writer.</returns>
+	public CodeWriter TypeDeclaration(TypeDeclarationOptions declaration)
+	{
+		if (declaration is null)
+			throw new ArgumentNullException(nameof(declaration));
+
+		if (declaration.Kind is TypeDeclarationKind.Enum or TypeDeclarationKind.Delegate)
+			throw new ArgumentException(
+				"Enums and delegates cannot be written as empty semicolon-terminated declarations.",
+				nameof(declaration)
+			);
+
+		if (WriteTypeDeclarationHeader(declaration))
+		{
+			if (HasGenericConstraints(declaration.GenericTypes))
+				NewLine();
+			GenericConstraints(declaration.GenericTypes);
+			Line(";");
+			CompleteWrittenItem(WrittenItemKind.Type, _indentLevel);
+		}
+
+		return this;
+	}
+
+	bool WriteTypeDeclarationHeader(TypeDeclarationOptions declaration)
+	{
 		ValidateTypeDeclaration(declaration);
 		BeginWrittenItem(WrittenItemKind.Type);
 
@@ -1830,13 +1990,10 @@ public sealed partial class CodeWriter
 			MethodGenericConstraints(declaration.GenericTypes);
 			Line(";");
 			CompleteWrittenItem(WrittenItemKind.Type, _indentLevel);
-			return default;
+			return false;
 		}
 
-		NewLine();
-		GenericConstraints(declaration.GenericTypes);
-
-		return OpenBlockScope(WrittenItemKind.Type);
+		return true;
 	}
 
 	/// <summary>
@@ -1992,12 +2149,15 @@ public sealed partial class CodeWriter
 			throw new ArgumentException("Generator name cannot be null or whitespace.", nameof(generatorName));
 		}
 
-		// The GeneratedCodeAttribute constructor requires a non-null version, so we default to "
-		return Write("[global::System.CodeDom.Compiler.GeneratedCode(\"")
-			.Write(generatorName)
-			.Write("\", \"")
-			.Write(version ?? "1.0.0.0")
-			.Line("\")]");
+		// The GeneratedCodeAttribute constructor requires a non-null version, so we default to "1.0.0.0".
+		return Attribute(
+				new(PurviewTypeLibrary.System.CodeDom.Compiler.GeneratedCodeAttribute)
+				{
+					Arguments = [new($"\"{generatorName}\""), new($"\"{version ?? "1.0.0.0"}\"")],
+				},
+				defaultTarget: null
+			)
+			.NewLine();
 	}
 
 	/// <summary>
@@ -2009,8 +2169,8 @@ public sealed partial class CodeWriter
 	/// </param>
 	/// <param name="includeEmbeddedAttribute">
 	/// Whether to emit <see cref="Microsoft.CodeAnalysis.EmbeddedAttribute"/>.
-	/// This is intended only for generator-emitted marker attribute types (R11) and must be
-	/// <see langword="false"/> for ordinary generated members.
+	/// This is intended only for generator-emitted marker attribute and enum types (R11) and must
+	/// be <see langword="false"/> for ordinary generated members.
 	/// </param>
 	/// <param name="includeGeneratedCodeAttribute">Whether to emit <see cref="System.CodeDom.Compiler.GeneratedCodeAttribute"/> and <see cref="System.Runtime.CompilerServices.CompilerGeneratedAttribute"/>.</param>
 	/// <example><code>writer.GeneratedAttributes(includeCoverageExclusion: true);</code></example>
@@ -2021,14 +2181,24 @@ public sealed partial class CodeWriter
 	)
 	{
 		if (includeEmbeddedAttribute)
-			Line("[global::Microsoft.CodeAnalysis.Embedded]");
+			Attribute(new(PurviewTypeLibrary.Microsoft.CodeAnalysis.EmbeddedAttribute), defaultTarget: null).NewLine();
 
 		if (includeCoverageExclusion)
-			Line("[global::System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]");
+		{
+			Attribute(
+					new(PurviewTypeLibrary.System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverageAttribute),
+					defaultTarget: null
+				)
+				.NewLine();
+		}
 
 		if (includeGeneratedCodeAttribute)
 		{
-			Line("[global::System.Runtime.CompilerServices.CompilerGenerated]");
+			Attribute(
+					new(PurviewTypeLibrary.System.Runtime.CompilerServices.CompilerGeneratedAttribute),
+					defaultTarget: null
+				)
+				.NewLine();
 			GeneratedCodeAttribute(GeneratorName, GeneratorVersion);
 		}
 
@@ -2044,13 +2214,13 @@ public sealed partial class CodeWriter
 	public PragmaScope OpenPragmasScope(params string[] pragmas)
 	{
 		if (pragmas is null || pragmas.Length == 0)
-			return new PragmaScope(this, []);
+			return new(this, []);
 
 		NewLine();
 		foreach (var pragma in pragmas)
 			Write("#pragma warning disable ").Line(pragma);
 
-		return new PragmaScope(this, pragmas);
+		return new(this, pragmas);
 	}
 
 	/// <summary>
@@ -2157,23 +2327,25 @@ public sealed partial class CodeWriter
 	/// <param name="receiver">The receiver expression written before the method name.</param>
 	/// <param name="methodName">The method name.</param>
 	/// <param name="arguments">The structured arguments to invoke the method with.</param>
+	/// <param name="genericArguments">Optional generic type arguments written after the method name.</param>
 	/// <param name="nullConditional">
 	/// Whether the receiver is invoked with the null-conditional operator (<c>?.</c>) so the call is
 	/// skipped when the receiver is <see langword="null"/>.
 	/// </param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.MethodCallOn("onBuilt", "Invoke", ["this", "builder"], nullConditional: true); // onBuilt?.Invoke(this, builder);</code></example>
+	/// <example><code>writer.MethodCallOn("builder.Services", "AddOptions", genericArguments: [optionsType]); // builder.Services.AddOptions&lt;Options&gt;();</code></example>
 	public CodeWriter MethodCallOn(
 		string receiver,
 		string methodName,
-		IEnumerable<MethodCallArgumentOptions> arguments,
+		IEnumerable<MethodCallArgumentOptions>? arguments = null,
+		IEnumerable<TypeReference>? genericArguments = null,
 		bool nullConditional = false
 	) =>
 		MethodCallCore(
 			methodName,
-			(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+			(arguments ?? []).Select(RenderCallArgument),
 			receiver,
-			genericArguments: null,
+			genericArguments,
 			false,
 			false,
 			nullConditional
@@ -2196,6 +2368,7 @@ public sealed partial class CodeWriter
 	/// <param name="receiver">The receiver expression written before the method name.</param>
 	/// <param name="methodName">The method name.</param>
 	/// <param name="arguments">The structured arguments to invoke the method with.</param>
+	/// <param name="genericArguments">Optional generic type arguments written after the method name.</param>
 	/// <param name="nullConditional">
 	/// Whether the receiver is invoked with the null-conditional operator (<c>?.</c>) so the call is
 	/// skipped when the receiver is <see langword="null"/>.
@@ -2205,14 +2378,15 @@ public sealed partial class CodeWriter
 	public CodeWriter AwaitedMethodCallOn(
 		string receiver,
 		string methodName,
-		IEnumerable<MethodCallArgumentOptions> arguments,
+		IEnumerable<MethodCallArgumentOptions>? arguments = null,
+		IEnumerable<TypeReference>? genericArguments = null,
 		bool nullConditional = false
 	) =>
 		MethodCallCore(
 			methodName,
-			(arguments ?? throw new ArgumentNullException(nameof(arguments))).Select(RenderCallArgument),
+			(arguments ?? []).Select(RenderCallArgument),
 			receiver,
-			genericArguments: null,
+			genericArguments,
 			false,
 			true,
 			nullConditional
@@ -2286,7 +2460,7 @@ public sealed partial class CodeWriter
 	/// <param name="genericArguments">Optional generic type arguments.</param>
 	/// <param name="writeArgumentsOnSeparateLines">Whether to force one argument per line.</param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.MethodCall("Create", ["value"], "factory", [TypeLibrary.System.String.AsTypeReference()]);</code></example>
+	/// <example><code>writer.MethodCall("Create", ["value"], "factory", [PurviewTypeLibrary.System.String.AsTypeReference()]);</code></example>
 	public CodeWriter MethodCall(
 		string methodName,
 		IEnumerable<string?> arguments,
@@ -2589,10 +2763,23 @@ public sealed partial class CodeWriter
 		return Assignment($"{type} {name}", value, forceNotNull);
 	}
 
+	/// <summary>
+	/// Writes the <c>new</c> keyword followed by the type name, or the bare <c>new</c> keyword for a
+	/// target-typed object creation whose type is inferred from the surrounding context.
+	/// </summary>
+	CodeWriter WriteNewPrefix(TypeReference reference)
+	{
+		Write("new");
+		if (!reference.IsNullOrEmpty())
+			Write(' ').TypeReference(reference);
+
+		return this;
+	}
+
 	bool ObjectCreationExpression(ObjectCreationOptions value, bool forceNotNull)
 	{
 		ValidateInitializerMembers(value);
-		Write("new ").TypeReference(value.Reference);
+		WriteNewPrefix(value.Reference);
 
 		var hasInitializer = !value.InitializerMembers.IsDefaultOrEmpty;
 		string[] arguments = value.Arguments.IsDefault ? [] : [.. value.Arguments.Select(RenderCallArgument)];
@@ -2755,7 +2942,7 @@ public sealed partial class CodeWriter
 	/// Raw constructor argument expressions written verbatim after the message; never escaped. When
 	/// <paramref name="message"/> is <see langword="null"/>, they are written as the sole constructor arguments.
 	/// </param>
-	/// <example><code>writer.Throw(TypeLibrary.System.ArgumentNullException, null, "nameof(value)");</code></example>
+	/// <example><code>writer.Throw(PurviewTypeLibrary.System.ArgumentNullException, null, "nameof(value)");</code></example>
 	public CodeWriter Throw(TypeReference exceptionType, string? message = null, params string[] constructorArguments)
 	{
 		if (exceptionType.IsNullOrEmpty())
@@ -3060,7 +3247,7 @@ public sealed partial class CodeWriter
 	/// </summary>
 	/// <param name="body">The action that writes the catch body.</param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.Catch(body =&gt; body.Throw(TypeLibrary.System.InvalidOperationException, "Failed"));</code></example>
+	/// <example><code>writer.Catch(body =&gt; body.Throw(PurviewTypeLibrary.System.InvalidOperationException, "Failed"));</code></example>
 	public CodeWriter Catch(Action<CodeWriter> body)
 	{
 		if (body is null)
@@ -3077,7 +3264,7 @@ public sealed partial class CodeWriter
 	/// <param name="name">The exception variable name, or <see langword="null"/> to omit it.</param>
 	/// <param name="body">The action that writes the catch body.</param>
 	/// <returns>The current writer.</returns>
-	/// <example><code>writer.Catch(TypeLibrary.System.Exception, "ex", body =&gt; body.MethodCall("Log", "ex"));</code></example>
+	/// <example><code>writer.Catch(PurviewTypeLibrary.System.Exception, "ex", body =&gt; body.MethodCall("Log", "ex"));</code></example>
 	public CodeWriter Catch(TypeReference? exceptionType, string? name, Action<CodeWriter> body)
 	{
 		if (body is null)
@@ -3093,7 +3280,7 @@ public sealed partial class CodeWriter
 	/// <param name="exceptionType">The caught exception type, or <see langword="null"/> for a bare catch.</param>
 	/// <param name="name">The exception variable name, or <see langword="null"/> to omit it.</param>
 	/// <returns>The catch body scope.</returns>
-	/// <example><code>using (writer.CatchScope(TypeLibrary.System.Exception, "ex")) writer.MethodCall("Log", "ex");</code></example>
+	/// <example><code>using (writer.CatchScope(PurviewTypeLibrary.System.Exception, "ex")) writer.MethodCall("Log", "ex");</code></example>
 	public BlockScope CatchScope(TypeReference? exceptionType = null, string? name = null)
 	{
 		Write("catch");
@@ -3445,6 +3632,23 @@ public sealed partial class CodeWriter
 
 		if (string.IsNullOrEmpty(expression))
 			return;
+
+		if (callback is not null)
+		{
+			// Callback-produced expressions carry their own internal layout and indentation relative to
+			// the expression's start. Splice each line in place: the writer's current indentation is
+			// applied at the start of every continuation line, and the callback's own indentation is
+			// preserved, so multi-line expressions are not double-indented.
+			var callbackLines = expression!.Split(NewLineCharacter);
+			Write(callbackLines[0].TrimEnd('\r'));
+			for (var index = 1; index < callbackLines.Length; index++)
+			{
+				NewLine();
+				Write(callbackLines[index].TrimEnd('\r'));
+			}
+
+			return;
+		}
 
 		var lines = expression!.Split(NewLineCharacter);
 		for (var index = 0; index < lines.Length; index++)
@@ -4433,10 +4637,17 @@ public sealed partial class CodeWriter
 			return;
 
 		var type = reference.Identity;
+		if (type == TypeIdentity.Null)
+			throw new ArgumentException("The null literal is not a valid type.", parameterName);
 		if (string.IsNullOrWhiteSpace(type.Name))
 			throw new ArgumentException("Type name cannot be null or whitespace.", parameterName);
 		if (type.GenericArity < 0)
 			throw new ArgumentException("Generic arity cannot be negative.", parameterName);
+		if (type.GenericArity > 0 && type.TypeArguments.IsDefaultOrEmpty)
+			throw new ArgumentException(
+				$"The open generic type '{type.MetadataName}' cannot be emitted as a type; construct it with MakeGeneric(...) or supply its type arguments.",
+				parameterName
+			);
 		if (
 			!type.TypeArguments.IsDefaultOrEmpty
 			&& (type.GenericArity == 0 || type.TypeArguments.Length != type.GenericArity)

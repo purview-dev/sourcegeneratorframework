@@ -15,6 +15,7 @@ static class RoslynComponentFixHelpers
 		if (argumentExpression is null)
 			return SyntaxFactory.Attribute(SyntaxFactory.ParseName(name));
 
+		// The attribute has an argument, so create an attribute argument list with a single argument.
 		return SyntaxFactory.Attribute(
 			SyntaxFactory.ParseName(name),
 			SyntaxFactory.AttributeArgumentList(
@@ -48,6 +49,7 @@ static class RoslynComponentFixHelpers
 		if (requiredNamespaces.IsDefaultOrEmpty)
 			return document.WithSyntaxRoot(updatedRoot);
 
+		// Add any missing using directives for the required namespaces.
 		return document.WithSyntaxRoot(AddMissingUsings(updatedRoot, requiredNamespaces) ?? updatedRoot);
 	}
 
@@ -74,6 +76,7 @@ static class RoslynComponentFixHelpers
 		if (missing.Count == 0)
 			return root;
 
+		// Add the missing using directives to the appropriate container.
 		return container switch
 		{
 			CompilationUnitSyntax compilationUnit => root.ReplaceNode(
@@ -98,6 +101,7 @@ static class RoslynComponentFixHelpers
 			if (compilationUnit.Members.FirstOrDefault() is FileScopedNamespaceDeclarationSyntax fileScoped)
 				return fileScoped;
 
+			// If there are no using directives and no file-scoped namespace, return the compilation unit itself to add the usings at the top.
 			return compilationUnit;
 		}
 

@@ -93,18 +93,27 @@ public readonly record struct TypeIdentity
 	/// <see cref="TypeIdentity(Type)"/>.
 	/// </para>
 	/// <para>
-	/// This produces a top-level, non-generic type. Use <see cref="Nested(string, int)"/> for nested types and
-	/// <see cref="MakeGeneric(TypeReference[])"/> for constructed generics.
+	/// This produces a top-level type whose own generic arity is <paramref name="arity"/>. With no type
+	/// arguments it represents an open definition when the arity is greater than zero. Use
+	/// <see cref="Nested(string, int)"/> for nested types and <see cref="MakeGeneric(TypeReference[])"/> for
+	/// constructed generics. Use <see cref="WithArity(int)"/> to create a higher-arity open definition from
+	/// an existing value, such as a <c>Func</c> with more type parameters.
 	/// </para>
 	/// </summary>
-	public TypeIdentity(string typeName, string? @namespace)
+	/// <param name="typeName">The type name without namespace, containing types or generic arity suffix.</param>
+	/// <param name="namespace">The namespace, or <see langword="null"/> for the global namespace.</param>
+	/// <param name="arity">The number of generic type parameters declared by the type.</param>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when the provided arity is negative.</exception>
+	public TypeIdentity(string typeName, string? @namespace, int arity = 0)
 	{
 		if (string.IsNullOrWhiteSpace(typeName))
 			throw new ArgumentException("Type name cannot be null, empty or whitespace.", nameof(typeName));
+		if (arity < 0)
+			throw new ArgumentOutOfRangeException(nameof(arity), arity, "Generic arity must be non-negative.");
 
 		Name = typeName;
 		Namespace = string.IsNullOrWhiteSpace(@namespace) ? null : @namespace;
-		GenericArity = 0;
+		GenericArity = arity;
 		ContainingTypes = [];
 		TypeArguments = [];
 	}
@@ -559,7 +568,38 @@ public readonly record struct TypeIdentity
 			if (!TypeArguments.IsDefaultOrEmpty)
 			{
 				foreach (var argument in TypeArguments)
-					hashCode = (hashCode * 397) ^ (argument?.GetHashCode() ?? 0);
+				{
+					if (argument is null)
+						continue;
+					hashCode = (hashCode * 397) ^ TypeReferenceHash(argument);
+				}
+			}
+
+			return hashCode;
+		}
+	}
+
+	// Hashes a type argument by its identity and modifiers without calling TypeReference.GetHashCode, which
+	// would re-enter TypeIdentity.GetHashCode and create an unbounded TypeIdentity <-> TypeReference recursion
+	// when the arguments are themselves constructed generics.
+	static int TypeReferenceHash(TypeReference reference)
+	{
+		unchecked
+		{
+			var hashCode = (int)reference.Kind;
+			hashCode =
+				(hashCode * 397)
+				^ (
+					reference.TypeParameterName is null
+						? 0
+						: StringComparer.Ordinal.GetHashCode(reference.TypeParameterName)
+				);
+			hashCode = (hashCode * 397) ^ reference.Identity.GetHashCode();
+
+			if (!reference.Modifiers.IsDefaultOrEmpty)
+			{
+				foreach (var modifier in reference.Modifiers)
+					hashCode = (hashCode * 397) ^ modifier.GetHashCode();
 			}
 
 			return hashCode;
@@ -618,6 +658,31 @@ public readonly record struct TypeIdentity
 	/// Creates a pointer structured type reference.
 	/// </summary>
 	public TypeReference MakePointer() => AsTypeReference().MakePointer();
+
+	/// <summary>
+	/// Creates an open generic definition of this type with the specified generic arity, or narrows an
+	/// existing value. The returned value carries no type arguments, so it matches every construction of
+	/// the type having that arity.
+	/// </summary>
+	/// <remarks>
+	/// This is primarily for types whose arity is a family rather than a fixed shape, such as
+	/// <c>Func&lt;TResult&gt;</c> through <c>Func&lt;T1…T16, TResult&gt;</c>:
+	/// <c>PurviewTypeLibrary.System.Func.WithArity(17)</c>.
+	/// </remarks>
+	/// <param name="arity">The number of generic type parameters declared by the type.</param>
+	/// <returns>An open generic definition with the specified arity.</returns>
+	/// <exception cref="ArgumentOutOfRangeException">Thrown when the provided arity is negative.</exception>
+	public TypeIdentity WithArity(int arity)
+	{
+		if (arity < 0)
+			throw new ArgumentOutOfRangeException(nameof(arity), arity, "Generic arity must be non-negative.");
+
+		// The new generic arity is the existing arity if already set, otherwise the number of arguments supplied.
+		return this with
+		{
+			GenericArity = arity,
+		};
+	}
 
 	/// <summary>
 	/// Creates a value describing a type nested inside this one.
@@ -733,6 +798,24 @@ public readonly record struct TypeIdentity
 	/// Gets an empty <see cref="TypeIdentity"/>.
 	/// </summary>
 	public static readonly TypeIdentity Empty;
+
+	/// <summary>
+	/// The C# <c>null</c> literal, presented as an identity for use in value positions.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// <c>null</c> is a literal value, not a named type, so this identity renders as the bare keyword
+	/// <c>null</c> and never matches a symbol — Roslyn exposes no type for the null literal. Prefer it in
+	/// value positions that accept an expression: initializers, default values, arguments and return
+	/// values, where the implicit conversion to <see cref="string"/> yields <c>"null"</c>.
+	/// </para>
+	/// <para>
+	/// This is distinct from <see cref="Empty"/>, which represents the absence of a type and must not be
+	/// emitted. A null literal in a <i>type</i> position is rejected by the <see cref="CodeWriter"/>
+	/// validators.
+	/// </para>
+	/// </remarks>
+	public static readonly TypeIdentity Null = new("null", null);
 
 	/// <summary>
 	/// Creates a <see cref="TypeIdentity"/> from a runtime type.
@@ -949,7 +1032,7 @@ public readonly record struct TypeIdentity
 
 		for (var index = 0; index < leftCount; index++)
 		{
-			if (!Equals(left[index], right[index]))
+			if (!TypeReferenceEqual(left[index], right[index]))
 				return false;
 		}
 
@@ -966,8 +1049,103 @@ public readonly record struct TypeIdentity
 
 		for (var index = 0; index < leftCount; index++)
 		{
-			if (!left[index].Similar(right[index]))
+			if (!TypeReferenceSimilar(left[index], right[index]))
 				return false;
+		}
+
+		return true;
+	}
+
+	// Compares a type argument by its identity and modifiers without calling TypeReference.Equals, which would
+	// re-enter TypeIdentity.Equals and create an unbounded TypeIdentity <-> TypeReference recursion when the
+	// arguments are themselves constructed generics.
+	static bool TypeReferenceEqual(TypeReference left, TypeReference right)
+	{
+		if (ReferenceEquals(left, right))
+			return true;
+
+		if (left.Kind != right.Kind)
+			return false;
+
+		if (!string.Equals(left.TypeParameterName, right.TypeParameterName, StringComparison.Ordinal))
+			return false;
+
+		if (left.Kind == TypeReferenceKind.Named && !left.Identity.Equals(right.Identity))
+			return false;
+
+		return TypeReferenceModifiersEqual(left.Modifiers, right.Modifiers);
+	}
+
+	static bool TypeReferenceSimilar(TypeReference left, TypeReference right)
+	{
+		if (ReferenceEquals(left, right))
+			return true;
+
+		if (left.Kind != right.Kind)
+			return false;
+
+		if (!string.Equals(left.TypeParameterName, right.TypeParameterName, StringComparison.Ordinal))
+			return false;
+
+		if (left.Kind == TypeReferenceKind.Named && !left.Identity.Similar(right.Identity))
+			return false;
+
+		return TypeReferenceModifiersSimilar(left.Modifiers, right.Modifiers);
+	}
+
+	static bool TypeReferenceModifiersEqual(ImmutableArray<TypeModifier> left, ImmutableArray<TypeModifier> right)
+	{
+		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
+		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
+
+		if (leftCount != rightCount)
+			return false;
+
+		for (var index = 0; index < leftCount; index++)
+		{
+			if (!left[index].Equals(right[index]))
+				return false;
+		}
+
+		return true;
+	}
+
+	static bool TypeReferenceModifiersSimilar(ImmutableArray<TypeModifier> left, ImmutableArray<TypeModifier> right)
+	{
+		var leftCount = left.IsDefaultOrEmpty ? 0 : left.Length;
+		var rightCount = right.IsDefaultOrEmpty ? 0 : right.Length;
+
+		var index = 0;
+		var otherIndex = 0;
+		while (index < leftCount || otherIndex < rightCount)
+		{
+			var modifier = index < leftCount ? left[index] : (TypeModifier?)null;
+			var otherModifier = otherIndex < rightCount ? right[otherIndex] : (TypeModifier?)null;
+
+			if (modifier is { Kind: TypeModifierKind.Nullable, NullableKind: NullableModifierKind.Reference })
+			{
+				index++;
+				continue;
+			}
+
+			if (otherModifier is { Kind: TypeModifierKind.Nullable, NullableKind: NullableModifierKind.Reference })
+			{
+				otherIndex++;
+				continue;
+			}
+
+			if (modifier is null || otherModifier is null)
+				return false;
+
+			if (
+				modifier.Value.Kind != otherModifier.Value.Kind
+				|| modifier.Value.Rank != otherModifier.Value.Rank
+				|| modifier.Value.NullableKind != otherModifier.Value.NullableKind
+			)
+				return false;
+
+			index++;
+			otherIndex++;
 		}
 
 		return true;

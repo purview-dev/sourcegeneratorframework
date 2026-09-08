@@ -63,6 +63,11 @@ public sealed record TypeReference
 	public bool IsEmpty => Kind == TypeReferenceKind.None;
 
 	/// <summary>
+	/// Gets a value indicating whether this reference is the C# <c>null</c> literal.
+	/// </summary>
+	public bool IsNullLiteral => Kind == TypeReferenceKind.Named && Identity.Equals(TypeIdentity.Null);
+
+	/// <summary>
 	/// Gets what this reference refers to beneath its modifiers.
 	/// </summary>
 	public TypeReferenceKind Kind { get; init; }
@@ -210,14 +215,20 @@ public sealed record TypeReference
 	/// <summary>
 	/// Implicitly converts a named type to an unmodified reference.
 	/// </summary>
-	public static implicit operator TypeReference(TypeIdentity type) => type == TypeIdentity.Empty ? Empty : new(type);
+	public static implicit operator TypeReference(TypeIdentity type) =>
+		// TypeIdentity.Empty is the only identity with a null name, so this avoids `==`, which can resolve
+		// to the cross-type operator and recurse back through this conversion.
+		type.Name
+			is null
+			? Empty
+			: new(type);
 
 	/// <summary>
 	/// Implicitly converts a named type to an unmodified reference, or <see langword="null"/> if the type is
 	/// </summary>
 	/// <param name="type"></param>
 	public static implicit operator TypeReference?(TypeIdentity? type) =>
-		type == null || type == TypeIdentity.Empty ? null : new(type!);
+		type is null || type.Value.Name is null ? null : new(type.Value);
 
 	/// <summary>
 	/// Implicitly converts a reference to its rendered name.
@@ -633,6 +644,16 @@ public sealed record TypeReference
 	/// Gets a reference to <see langword="dynamic"/>.
 	/// </summary>
 	public static TypeReference Dynamic { get; } = new() { Kind = TypeReferenceKind.Dynamic, Modifiers = [] };
+
+	/// <summary>
+	/// Gets a reference to the C# <c>null</c> literal.
+	/// </summary>
+	/// <remarks>
+	/// Renders as the bare keyword <c>null</c> and is intended only for value positions — initializers,
+	/// default values, arguments and return values. It must not be used as a type; the
+	/// <see cref="CodeWriter"/> validators reject it in type positions.
+	/// </remarks>
+	public static TypeReference Null { get; } = new(TypeIdentity.Null);
 
 	/// <summary>
 	/// Creates a reference to an open generic parameter.

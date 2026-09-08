@@ -83,11 +83,11 @@ the normal reference allows the test class to derive from
 reference.
 
 For multi-target TUnit projects, the normal reference means the generator's Roslyn dependencies
-participate in reference resolution for every target. Build the generator against the oldest
-compatible Roslyn version (Roslyn 4.13 for a .NET 8–10 test matrix) and avoid forcing a newer
-`System.Collections.Immutable` version through central package management. The framework's
-`RegisterEmbeddedAttribute` helper can be used instead of Roslyn 4.14's
-`AddEmbeddedAttributeDefinition` API when .NET 8 compatibility is required.
+participate in reference resolution for every target. Build the generator against the Roslyn version
+that supports its API usage; this framework is built against Roslyn 5.0, which ships `net8.0` and
+`net9.0` package assets, so a .NET 8–10 test matrix still loads it. Compiler hosts that consume the
+generator as an analyzer must be Roslyn 5.0 or later (`.NET 10` SDK / Visual Studio 2026). Do not
+force a newer `System.Collections.Immutable` version through central package management.
 
 ## Which base class and method
 
@@ -131,15 +131,48 @@ imported). `await Assert.That(...)` is terminal and returns the value:
 
 - `HasGeneratedMethod` / `HasGeneratedMethodReturnType` / `HasGeneratedClass` / `HasGeneratedProperty` /
   `HasGeneratedField` / `HasGeneratedSyntaxTree` — return the syntax node; `HasGeneratedMethod(name, TypeReference[])`
-  matches parameter types.
+  matches parameter types. `HasGeneratedClass(name, arity)` (or a `TypeIdentity` with arity) matches a generic
+  type by its type-parameter count, so `new TypeIdentity("ResourceDefinition", ns, arity: 1)` finds
+  `ResourceDefinition<T>` without matching the non-generic `ResourceDefinition`.
 - `HasFixedMethod` — same for code-fix and refactoring results.
+- `HasPropertyOfType` / `HasFieldOfType` / `HasMethodOfType` / `HasConstructorOfType` / `HasAttributeOfType` /
+  `HasNestedType` — chain from a scoped `CodeQueryResult<T>` (for example the result of `HasGeneratedClass`) and
+  return the matched member. The node-producing assertions move the chain onto the matched node, so you can
+  append node-inspection assertions with `.And`:
+  ```csharp
+  var method = await Assert.That(query)
+      .HasGeneratedClass("Service")
+      .And.HasNestedType("Builder")
+      .And.WithAccessibility(Accessibility.Private)
+      .And.HasMethodOfType("Build", []);
+  ```
+- `WithAccessibility` / `WithGetterAccessibility` / `WithSetterAccessibility` / `WithBaseType` /
+  `WithGenericTypeParameter(s)` / `IsInNamespace` / `IsInGlobalNamespace` — node-inspection assertions that
+  keep the matched node on the chain. Accessibility resolves C# defaults (an unmodified nested type is
+  `Private`, a top-level type `Internal`, interface/enum members `Public`, and an accessor with no modifier
+  inherits its property's accessibility).
 - `HasDiagnostic` / `HasDiagnostics` / `HasNoDiagnostics` / `DoesNotHaveDiagnostic` / `HasNoErrorDiagnostics`.
 - `HasSymbol(TypeIdentity)` / `HasSymbol("Namespace.Type")`.
 - `GeneratesCode(expected)` / `ContainsGeneratedCode(expected)` (whitespace-flattened).
 
+The `CodeQuery` assertions operate on a `CodeQuery` directly, so they accept a query from any test result —
+`result.Generated()` for generated code, `result.Output()` for the whole compilation, or `result.FixedCode()`
+for fixed/refactored code. Convenience overloads on the test result types query the generated (or fixed) code
+for you.
+
+To assert a nullable expected type, use the test-only `query.MakeNullable(...)` extension: it resolves the
+annotation against the query's compilation and, unlike `TypeReference.Nullable()`/`TypeIdentity.MakeNullable()`,
+does not trigger the `PSGFR16` context-overload suggestion (tests have no generation context to pass).
+
 ```csharp
-MethodDeclarationSyntax method = await Assert.That(result).HasGeneratedMethod("DoWork", [intType, nullableInt]);
-await Assert.That(result).HasGeneratedSyntaxTree("Service.g.cs");
+var query = result.Generated();
+MethodDeclarationSyntax method = await Assert.That(query).HasGeneratedMethod("DoWork", [intType, nullableInt]);
+await Assert.That(query).HasGeneratedSyntaxTree("Service.g.cs");
+await Assert.That(result.FixedCode()).HasFixedMethod("DoWork");   // code-fix / refactor results
+
+// Scoped member chaining:
+CodeQueryResult<ClassDeclarationSyntax> attributeClass = await Assert.That(query).HasGeneratedClass(hostKitAttribute);
+await Assert.That(attributeClass).HasPropertyOfType("Name", query.MakeNullable(TypeLibrary.System.String));
 ```
 
 ## Incremental cache tests

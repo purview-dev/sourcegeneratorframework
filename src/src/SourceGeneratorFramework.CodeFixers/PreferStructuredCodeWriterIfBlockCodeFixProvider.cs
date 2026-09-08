@@ -114,18 +114,11 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProvider : CodeFixPr
 			if (bodyIndex >= arguments.Count)
 				return false;
 
-			if (condition is null)
-			{
-				newArgumentList = SyntaxFactory.ArgumentList(
-					SyntaxFactory.SingletonSeparatedList(arguments[bodyIndex])
-				);
-			}
-			else
-			{
-				newArgumentList = SyntaxFactory.ArgumentList(
+			newArgumentList = condition is null
+				? SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(arguments[bodyIndex]))
+				: SyntaxFactory.ArgumentList(
 					CreateSeparatedList([WithCondition(arguments[0], condition), arguments[bodyIndex]])
 				);
-			}
 		}
 
 		newArgumentList = newArgumentList.WithTriviaFrom(invocation.ArgumentList);
@@ -178,6 +171,7 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProvider : CodeFixPr
 				return true;
 
 			case InterpolatedStringExpressionSyntax interpolated:
+#pragma warning disable format
 			{
 				var builder = new System.Text.StringBuilder();
 				foreach (var content in interpolated.Contents)
@@ -189,6 +183,7 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProvider : CodeFixPr
 				text = builder.ToString();
 				return true;
 			}
+#pragma warning restore format
 
 			default:
 				break;

@@ -28,7 +28,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
-			TypeLibrary.GenerateServiceAttribute,
+			ExampleGenerator.PurviewTypeLibrary.GenerateServiceAttribute,
 			CreateServiceTarget
 		);
 
@@ -50,7 +50,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 			return ServiceTarget.Empty;
 
 		var attributeData = ctx.Attributes.FirstOrDefault(a =>
-			TypeLibrary.GenerateServiceAttribute.Equals(a.AttributeClass)
+			ExampleGenerator.PurviewTypeLibrary.GenerateServiceAttribute.Equals(a.AttributeClass)
 		);
 		if (attributeData is null)
 			return ServiceTarget.Empty;
@@ -59,7 +59,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 		if (!model.Exists)
 			return ServiceTarget.Empty;
 
-		var lifetime = model.Lifetime ?? TypeLibrary.ServiceLifetime.StaticMember("Singleton");
+		var lifetime = model.Lifetime ?? ExampleGenerator.PurviewTypeLibrary.ServiceLifetime.StaticMember("Singleton");
 		var memberName = lifetime.Substring(lifetime.LastIndexOf('.') + 1);
 
 		return new ServiceTarget(

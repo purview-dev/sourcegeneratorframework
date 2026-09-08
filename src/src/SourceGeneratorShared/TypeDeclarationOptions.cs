@@ -34,6 +34,22 @@ public sealed record TypeDeclarationOptions
 	}
 
 	/// <summary>
+	/// Initializes a type declaration description from a nullable <see cref="TypeIdentity"/>. This overload
+	/// binds when a nullable identity is supplied so it is not ambiguously resolved to the
+	/// <see cref="string"/>-based constructor via the implicit string conversion.
+	/// </summary>
+	/// <param name="type">The type value object.</param>
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public TypeDeclarationOptions(TypeIdentity? type, TypeDeclarationAccessibility? accessibility = null)
+	{
+		if (type is null || type.Value.Name is null)
+			throw new ArgumentException("Type name cannot be null or whitespace.", nameof(type));
+
+		Name = type.Value.Name;
+		Accessibility = accessibility;
+	}
+
+	/// <summary>
 	/// Gets the generated type name without generic parameters.
 	/// </summary>
 	public string Name { get; }
@@ -141,9 +157,9 @@ public sealed record TypeDeclarationOptions
 
 	/// <summary>
 	/// Gets whether to emit <see cref="EmbeddedAttribute"/> on the type.
-	/// When <see langword="null"/>, <c>AttributeClass</c> enables it and other type-writing
-	/// APIs leave it disabled. Set this explicitly to <see langword="false"/> to opt a generated
-	/// attribute out of embedding.
+	/// When <see langword="null"/>, <c>AttributeClass</c> and <c>Enum</c> enable it and other
+	/// type-writing APIs leave it disabled. Set this explicitly to <see langword="false"/> to opt a
+	/// generated attribute or enum out of embedding.
 	/// </summary>
 	public bool? IncludeEmbeddedAttribute { get; init; }
 

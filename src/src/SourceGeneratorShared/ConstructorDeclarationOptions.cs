@@ -31,6 +31,16 @@ public readonly record struct ConstructorDeclarationOptions
 		: this(type.AsTypeReference(), accessibility) { }
 
 	/// <summary>
+	/// Initializes a constructor declaration from a nullable containing type. This overload binds when a
+	/// nullable identity is supplied so it is not ambiguously resolved to the <see cref="string"/>-based
+	/// constructor via the implicit string conversion.
+	/// </summary>
+	/// <param name="type">The containing type. Only its unqualified declaration name is used.</param>
+	/// <param name="accessibility">The optional accessibility modifier, or <see langword="null"/> to omit accessibility.</param>
+	public ConstructorDeclarationOptions(TypeIdentity? type, TypeDeclarationAccessibility? accessibility = null)
+		: this(type is null || type.Value.Name is null ? TypeIdentity.Empty : type.Value, accessibility) { }
+
+	/// <summary>
 	/// Initializes a constructor declaration from its containing type reference.
 	/// </summary>
 	/// <param name="reference">The containing type reference.</param>

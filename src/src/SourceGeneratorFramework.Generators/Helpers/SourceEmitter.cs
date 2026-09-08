@@ -14,6 +14,12 @@ static partial class SourceEmitter
 		yield return (GetHintName(nameof(GenericTypeArgumentAttribute)), GenericTypeArgumentAttribute());
 	}
 
+	public static IEnumerable<(string HintName, SourceText Source)> TypeLibraryEmit()
+	{
+		yield return (GetHintName(nameof(GenerateTypeLibraryAttribute)), GenerateTypeLibraryAttribute());
+		yield return (GetHintName(nameof(TypeRefAttribute)), TypeRefAttribute());
+	}
+
 	static CodeWriter CreateWriter(TypeReference type)
 	{
 		CodeWriter writer = new(GenerationSettings.Create<AttributeDataModelGenerator>());

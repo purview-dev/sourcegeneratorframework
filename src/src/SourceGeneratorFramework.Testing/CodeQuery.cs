@@ -121,8 +121,8 @@ public sealed partial class CodeQuery(
 	/// Gets the first syntax node of the specified type, optionally matching a predicate.
 	/// </summary>
 	/// <exception cref="SyntaxNotFoundException">No node matched.</exception>
-	public T Get<T>(Func<T, bool>? predicate = null)
-		where T : SyntaxNode => TryGet(out var node, predicate) ? node! : throw NotFound<T>();
+	public CodeQueryResult<T> Get<T>(Func<T, bool>? predicate = null)
+		where T : SyntaxNode => TryGet(out var node, predicate) ? new(this, node!) : throw NotFound<T>();
 
 	/// <summary>
 	/// Determines whether a syntax node of the specified type exists, optionally matching a predicate.
@@ -133,20 +133,20 @@ public sealed partial class CodeQuery(
 	/// <summary>
 	/// Gets all syntax nodes of the specified type, optionally matching a predicate.
 	/// </summary>
-	public ImmutableArray<T> GetAll<T>(Func<T, bool>? predicate = null)
+	public ImmutableArray<CodeQueryResult<T>> GetAll<T>(Func<T, bool>? predicate = null)
 		where T : SyntaxNode
 	{
-		var builder = ImmutableArray.CreateBuilder<T>();
+		var builder = ImmutableArray.CreateBuilder<CodeQueryResult<T>>();
 		foreach (var tree in Trees)
 		{
 			var root = RootOf(tree);
 			if (root is T rootNode && (predicate is null || predicate(rootNode)))
-				builder.Add(rootNode);
+				builder.Add(new(this, rootNode));
 
 			foreach (var candidate in root.DescendantNodes().OfType<T>())
 			{
 				if (predicate is null || predicate(candidate))
-					builder.Add(candidate);
+					builder.Add(new(this, candidate));
 			}
 		}
 

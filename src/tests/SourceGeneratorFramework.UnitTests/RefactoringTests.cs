@@ -75,7 +75,28 @@ public class RefactoringTests : TUnitRefactoringTestBase<AddObsoleteRefactoringP
 
 		var method = result.FixedCode().GetMethod("DoWork");
 
-		await Assert.That(method.AttributeLists).IsNotEmpty();
-		await Assert.That(method.AttributeLists[0].ToString()).Contains("Obsolete");
+		await Assert.That(method.Node.AttributeLists).IsNotEmpty();
+		await Assert.That(method.Node.AttributeLists[0].ToString()).Contains("Obsolete");
+	}
+
+	[Test]
+	public async Task RefactorAsync_HasFixedMethod_FromCodeQuery_LocatesRefactoredMethod(
+		CancellationToken cancellationToken
+	)
+	{
+		var result = await RefactorAsync(
+			Source,
+			new RefactorTestOptions
+			{
+				NodeSelector = query => query.GetMethod("DoWork"),
+				EquivalenceKey = AddObsoleteRefactoringProvider.EquivalenceKey,
+			},
+			cancellationToken
+		);
+
+		var method = await Assert.That(result.FixedCode()).HasFixedMethod("DoWork");
+
+		await Assert.That(method.Node.AttributeLists).IsNotEmpty();
+		await Assert.That(method.Node.AttributeLists[0].ToString()).Contains("Obsolete");
 	}
 }

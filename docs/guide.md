@@ -1119,6 +1119,13 @@ syntax.NormalizeWhitespace().ToFullString()
 
 for large generated trees.
 
+Generated output may use C# 14 features — extension-member blocks (`extension(...)`, via
+`CodeWriter.ExtensionBlockScope`), the `field` keyword, collection expressions — when the target
+compilation supports them. The framework is built against Roslyn 5.x, so its generators may emit C# 14
+output; consumers need a matching compiler (`.NET 10` SDK / Roslyn 5.0 or later) to compile it. Gate any
+newer-than-baseline features on `GenerationSettings.LanguageVersion` when a generator must also serve
+older hosts.
+
 ---
 
 ## Post-Initialization Output
@@ -1279,6 +1286,12 @@ Microsoft's published compatibility baseline is:
 | 5.0 | VS 2026 18.0 | C# 14 / .NET 10 |
 
 This table gives the **minimum documented Visual Studio host**.
+
+> **This framework is built against Roslyn 5.0.** The generator, analyzer, and testing assemblies in
+> `Purview.SourceGeneratorFramework*` are compiled against `Microsoft.CodeAnalysis` 5.x, so compiler
+> hosts that load them must be Roslyn 5.0 or later (`.NET 10` SDK / Visual Studio 2026 18.0). The
+> testing packages multi-target `net8.0`–`net10.0`; Roslyn 5.x ships `net8.0`/`net9.0` package assets,
+> so those test targets still load the test runner.
 
 Do not interpret it as:
 

@@ -81,7 +81,7 @@ var result = await RefactorAsync(
     cancellationToken);
 
 var method = result.FixedCode().GetMethod("Process");
-await Assert.That(method.AttributeLists).IsNotEmpty();
+await Assert.That(method.Node.AttributeLists).IsNotEmpty();
 ```
 
 Tests are in [`LoggingRefactoringTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.CodeFixers.UnitTests).
@@ -93,6 +93,18 @@ Tests in [`SourceGeneratorFramework.ExampleGenerator.UnitTests`](../../tests/Sou
 ### Incremental cache tests
 
 [`ServiceRegistrationCacheTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.UnitTests) proves the pipeline caches correctly stage-by-stage using `GenerateIncrementalAsync`: the first run reports every framework stage as `New`, an identical rerun keeps them `Cached`/`Unchanged`, and a property-only or source-only change marks only the affected stage `Modified`. Other generator projects should mirror this pattern with `RunIncrementalAsync`/`GenerateIncrementalAsync`.
+
+## Type-library sample (`TypeLibraryGenerator`)
+
+[`TypeLibrarySpec.cs`](TypeLibrarySpec.cs) demonstrates the `[GenerateTypeLibrary]` DSL from the core
+framework. It declares three identities — a self-generated attribute (by name), a framework type
+(`typeof(...)`), and a logging type automatched onto a generated `LoggingTypes` group class — and the
+generator emits `SampleTypeLibrary`, which extends the framework `TypeLibrary` with those identities as
+extension members.
+
+[`TypeLibrarySampleGenerator`](TypeLibrarySampleGenerator.cs) consumes the generated identities through
+`TypeLibrary.<Member>` and bakes their names into a small generated class. Tests are in
+[`TypeLibrarySampleGeneratorTests`](../../tests/SourceGeneratorFramework.ExampleGenerator.UnitTests).
 
 ## Usage
 

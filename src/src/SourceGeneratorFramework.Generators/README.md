@@ -161,6 +161,45 @@ public readonly partial record struct HostKitAttributeData(
 );
 ```
 
+## TypeLibraryGenerator
+
+`TypeLibraryGenerator` generates the type-library boilerplate every generator needs: a self-contained
+static class of `TypeIdentity`/`TypeReference` values whose nested classes mirror the declared
+namespaces. Instead of hand-writing the nested classes and fields, declare a spec with
+`[GenerateTypeLibrary]` and a `[TypeRef]` field per value, and the generator fills in the rest.
+
+```csharp
+namespace MyGenerator;
+
+[GenerateTypeLibrary(ClassName = "MyTypeLibrary", Namespace = "MyGenerator")]
+static partial class TypeLibrarySpec
+{
+    // A type your own generator emits — the namespace-only overload uses the member name as the type name.
+    // Plain TypeIdentity members are private markers:
+    [TypeRef("MyGenerator")]
+    static readonly TypeIdentity GenerateMyAttribute = default;
+
+    [TypeRef(typeof(global::System.Diagnostics.Debug))]
+    static readonly TypeIdentity Debug = default;
+
+    [TypeRef("ILogger", "Microsoft.Extensions.Logging")]
+    static readonly TypeIdentity ILogger = default;
+
+    // A composed TypeReference value member (internal):
+    [TypeRef("System.Collections.Generic")]
+    internal static readonly TypeReference Items =
+        global::Purview.SourceGeneratorFramework.PurviewTypeLibrary.System.Collections.Generic.IEnumerable.MakeGeneric(
+            global::Purview.SourceGeneratorFramework.PurviewTypeLibrary.System.String);
+}
+```
+
+Consumers then reference `MyTypeLibrary.GenerateMyAttribute`,
+`MyTypeLibrary.System.Diagnostics.Debug`,
+`MyTypeLibrary.Microsoft.Extensions.Logging.ILogger`, and
+`MyTypeLibrary.System.Collections.Generic.Items` directly.
+
+See [docs/type-library.md](../../docs/type-library.md) for the full DSL and the member-accessibility rules.
+
 ## License
 
 This project is licensed under the MIT license.

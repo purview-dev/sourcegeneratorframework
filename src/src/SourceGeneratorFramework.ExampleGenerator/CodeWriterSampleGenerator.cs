@@ -18,7 +18,7 @@ public partial class CodeWriterSampleGenerator : IIncrementalGenerator
 
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
-			TypeLibrary.GenerateCodeWriterSampleAttribute,
+			ExampleGenerator.PurviewTypeLibrary.GenerateCodeWriterSampleAttribute,
 			static (ctx, ct) =>
 			{
 				if (ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct) is not INamedTypeSymbol symbol)

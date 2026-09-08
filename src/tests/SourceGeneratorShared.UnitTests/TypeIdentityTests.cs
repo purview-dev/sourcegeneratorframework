@@ -449,4 +449,145 @@ public sealed class TypeIdentityTests
 			.That(void () => _ = dictionary.MakeGeneric(new TypeIdentity(SpecialType.System_String)))
 			.Throws<ArgumentException>();
 	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Arity
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Constructor_GivenArity_SetsGenericArity()
+	{
+		var value = new TypeIdentity("Func", "System", 1);
+
+		await Assert.That(value.GenericArity).IsEqualTo(1);
+		await Assert.That(value.IsGenericTypeDefinition).IsTrue();
+		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Func<>");
+		await Assert.That(value.MetadataName).IsEqualTo("Func`1");
+	}
+
+	[Test]
+	public async Task Constructor_GivenDefaultArity_PreservesNonGenericBehavior()
+	{
+		var value = new TypeIdentity("List", "System.Collections.Generic");
+
+		await Assert.That(value.GenericArity).IsEqualTo(0);
+		await Assert.That(value.IsGenericTypeDefinition).IsFalse();
+		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Collections.Generic.List");
+		await Assert.That(value.MetadataName).IsEqualTo("List");
+	}
+
+	[Test]
+	public async Task Constructor_GivenNegativeArity_Throws()
+	{
+		await Assert.That(() => new TypeIdentity("Func", "System", -1)).Throws<ArgumentOutOfRangeException>();
+	}
+
+	[Test]
+	public async Task WithArity_CreatesOpenDefinitionMatchingEveryConstruction()
+	{
+		var compilation = TestCompilation.Create();
+		var func = compilation.GetTypeByMetadataName("System.Func`17")!;
+		var value = new TypeIdentity("Func", "System", 1).WithArity(17);
+
+		await Assert.That(value.GenericArity).IsEqualTo(17);
+		await Assert.That(value.IsGenericTypeDefinition).IsTrue();
+		await Assert.That(value.Matches(func)).IsTrue();
+		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Func<" + new string(',', 16) + ">");
+		await Assert.That(value.MetadataName).IsEqualTo("Func`17");
+	}
+
+	[Test]
+	public async Task WithArity_GivenNegativeArity_Throws()
+	{
+		await Assert
+			.That(() => new TypeIdentity("Func", "System", 1).WithArity(-1))
+			.Throws<ArgumentOutOfRangeException>();
+	}
+
+	// ---------------------------------------------------------------------------------------------
+	// Null literal
+	// ---------------------------------------------------------------------------------------------
+
+	[Test]
+	public async Task Null_RendersAsBareKeyword()
+	{
+		string converted = TypeIdentity.Null;
+
+		await Assert.That(TypeIdentity.Null.RenderFullName).IsEqualTo("null");
+		await Assert.That(TypeIdentity.Null.RenderTypeName).IsEqualTo("null");
+		await Assert.That(TypeIdentity.Null.MetadataName).IsEqualTo("null");
+		await Assert.That(converted).IsEqualTo("null");
+	}
+
+	[Test]
+	public async Task Null_IsDistinctFromEmpty()
+	{
+		await Assert.That(TypeIdentity.Null).IsNotEqualTo(TypeIdentity.Empty);
+		await Assert.That(TypeIdentity.Null.IsGenericTypeDefinition).IsFalse();
+		await Assert.That(TypeIdentity.Null.IsGlobalNamespace).IsTrue();
+	}
+
+	[Test]
+	public async Task Null_DoesNotMatchAnySymbol()
+	{
+		ITypeSymbol? noType = null;
+		var symbol = TestCompilation.FieldType("public string Value = null!;");
+
+		await Assert.That(TypeIdentity.Null.Matches(symbol)).IsFalse();
+		await Assert.That(TypeIdentity.Null.Matches(noType)).IsFalse();
+	}
+
+	[Test]
+	public async Task Equals_ConstructedGenericWithOpenGenericArgument_IsEqual()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+		var other = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		await Assert.That(resourceKitBase.Equals(other)).IsTrue();
+	}
+
+	[Test]
+	public async Task GetHashCode_ConstructedGenericWithOpenGenericArgument_DoesNotOverflow()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		await Assert.That(resourceKitBase.GetHashCode()).IsNotEqualTo(0);
+	}
+
+	[Test]
+	public async Task ImplicitConversion_ConstructedGeneric_DoesNotOverflow()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1).MakeGeneric(
+				new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace")
+			),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		TypeIdentity? nullable = resourceKitBase;
+		TypeReference? reference = nullable;
+		await Assert.That(reference is not null).IsTrue();
+		await Assert.That(reference!.Identity.Equals(resourceKitBase)).IsTrue();
+	}
+
+	[Test]
+	public async Task EqualityWithNullAndEmpty_ConstructedGeneric_DoesNotOverflow()
+	{
+		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
+			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
+			new TypeIdentity("RedisResourceKit", "Testing")
+		);
+
+		await Assert.That(resourceKitBase == TypeIdentity.Null).IsFalse();
+		await Assert.That(resourceKitBase == TypeIdentity.Empty).IsFalse();
+	}
 }
