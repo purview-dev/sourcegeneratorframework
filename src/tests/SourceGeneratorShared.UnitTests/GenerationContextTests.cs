@@ -52,7 +52,7 @@ public class GenerationContextTests
 	public async Task Constructor_GivenLogger_ExposesLogger()
 	{
 		// Arrange
-		var logger = new TestLogger();
+		TestLogger logger = new();
 		var context = CreateGenerationContext(new GenerationSettings("TestGenerator", "1.0.0"), logger);
 
 		// Act / Assert
@@ -62,8 +62,8 @@ public class GenerationContextTests
 	[Test]
 	public async Task GenerationSettings_UsesValueEquality()
 	{
-		var settingsA = new GenerationSettings("A", "1.0.0");
-		var settingsB = new GenerationSettings("A", "1.0.0");
+		GenerationSettings settingsA = new("A", "1.0.0");
+		GenerationSettings settingsB = new("A", "1.0.0");
 		var settingsC = settingsA with { ValidateCodeWriterScopes = true };
 
 		await Assert.That(settingsA).IsEqualTo(settingsB);

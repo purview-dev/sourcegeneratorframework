@@ -375,7 +375,7 @@ public static class TypeSyntaxMatchingExtensions
 
 	static List<string> BuildExpectedQualifier(in TypeIdentity type)
 	{
-		var segments = new List<string>();
+		List<string> segments = [];
 
 		if (type.Namespace is { Length: > 0 } @namespace)
 		{

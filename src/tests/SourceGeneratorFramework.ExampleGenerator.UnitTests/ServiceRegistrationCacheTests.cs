@@ -1,8 +1,6 @@
-using System.Collections.Immutable;
 using Purview.SourceGeneratorFramework.Examples;
 using Purview.SourceGeneratorFramework.Testing;
 using Purview.SourceGeneratorFramework.Testing.TUnit;
-using StepReason = Microsoft.CodeAnalysis.IncrementalStepRunReason;
 
 namespace Purview.SourceGeneratorFramework.ExampleGenerator;
 
@@ -21,17 +19,6 @@ public class ServiceRegistrationCacheTests
 		public class MyService { }
 		""";
 
-	static ImmutableDictionary<string, ImmutableArray<StepReason>> StepReasons(IncrementalCacheRun run)
-	{
-		var builder = ImmutableDictionary.CreateBuilder<string, ImmutableArray<StepReason>>();
-		foreach (var pair in run.Steps)
-		{
-			builder[pair.Key] = [.. pair.Value.SelectMany(step => step.Outputs.Select(static output => output.Reason))];
-		}
-
-		return builder.ToImmutable();
-	}
-
 	[Test]
 	public async Task FirstRun_AllStagesAreNew(CancellationToken cancellationToken)
 	{
@@ -40,9 +27,7 @@ public class ServiceRegistrationCacheTests
 			cancellationToken: cancellationToken
 		);
 
-		var reasons = StepReasons(result.Runs[0]);
-		await Assert.That(reasons).IsNotEmpty();
-		await Assert.That(reasons.Values.SelectMany(static r => r).All(static r => r == StepReason.New)).IsTrue();
+		await Assert.That(result.Runs[0]).AllStepsNew();
 	}
 
 	[Test]
@@ -50,28 +35,13 @@ public class ServiceRegistrationCacheTests
 	{
 		var result = await GenerateIncrementalAsync([Source], cancellationToken: cancellationToken);
 
-		var second = StepReasons(result.Runs[1]);
-		await Assert.That(second).IsNotEmpty();
-
 		// The generator's own pipeline stages must all be cached or unchanged. (Roslyn's internal
 		// ForAttributeWithMetadataName steps can report Modified on rerun because the post-initialization
 		// attribute source is regenerated as a new tree.)
-		string[] frameworkStages =
-		[
-			"GetMSBuildPropertyValue_EmitServiceRegistrationInfo",
-			"GetGenerationConfiguration",
-			"GetGenerationContext_EmptyCapabilities",
-			"ForAttribute_GenerateServiceAttribute",
-		];
-
-		await Assert
-			.That(
-				frameworkStages.All(stage =>
-					second.TryGetValue(stage, out var reasons)
-					&& reasons.All(static r => r is StepReason.Cached or StepReason.Unchanged)
-				)
-			)
-			.IsTrue();
+		await Assert.That(result.Runs[1]).StepIsCached("GetMSBuildPropertyValue_EmitServiceRegistrationInfo");
+		await Assert.That(result.Runs[1]).StepIsCached("GetGenerationConfiguration");
+		await Assert.That(result.Runs[1]).StepIsCached("GetGenerationContext_EmptyCapabilities");
+		await Assert.That(result.Runs[1]).StepIsCached("ForAttribute_GenerateServiceAttribute");
 	}
 
 	[Test]
@@ -87,15 +57,8 @@ public class ServiceRegistrationCacheTests
 			cancellationToken: cancellationToken
 		);
 
-		var second = StepReasons(result.Runs[1]);
-
-		await Assert.That(second["GetMSBuildPropertyValue_EmitServiceRegistrationInfo"]).Contains(StepReason.Modified);
-		await Assert
-			.That(
-				second["ForAttribute_GenerateServiceAttribute"]
-					.All(static r => r is StepReason.Cached or StepReason.Unchanged)
-			)
-			.IsTrue();
+		await Assert.That(result.Runs[1]).StepIsModified("GetMSBuildPropertyValue_EmitServiceRegistrationInfo");
+		await Assert.That(result.Runs[1]).StepIsCached("ForAttribute_GenerateServiceAttribute");
 	}
 
 	[Test]
@@ -115,11 +78,7 @@ public class ServiceRegistrationCacheTests
 			cancellationToken: cancellationToken
 		);
 
-		var second = StepReasons(result.Runs[1]);
-
-		await Assert.That(second["ForAttribute_GenerateServiceAttribute"]).Contains(StepReason.Modified);
-		await Assert
-			.That(second["GetMSBuildPropertyValue_EmitServiceRegistrationInfo"].All(static r => r == StepReason.Cached))
-			.IsTrue();
+		await Assert.That(result.Runs[1]).StepIsModified("ForAttribute_GenerateServiceAttribute");
+		await Assert.That(result.Runs[1]).StepIsCached("GetMSBuildPropertyValue_EmitServiceRegistrationInfo");
 	}
 }

@@ -1,12 +1,18 @@
-using Microsoft.CodeAnalysis;
+// IDE0005 cannot see references inside extension(...) blocks, so it incorrectly reports these usings as
+// unnecessary; they are required for TypeIdentity used in the block bodies.
+#pragma warning disable IDE0005
+#pragma warning disable CS1591
+using System.ComponentModel;
+using Purview.SourceGeneratorFramework;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Microsoft.CodeAnalysis;
 
 /// <summary>
 /// Provides extension methods for extracting values from <see cref="AttributeData"/>.
 /// </summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly")]
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1708:Identifiers should differ by more than case")]
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static partial class AttributeDataExtensions
 {
 	extension(AttributeData attribute)

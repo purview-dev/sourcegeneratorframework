@@ -16,14 +16,17 @@ static class AttributeDataModelLibrary
 			.ForAttributeWithMetadataName(
 				context,
 				GeneratorTypeLibrary.Attirbutes.GenerateAttribute,
-				(ctx, ct) =>
+				static (ctx, ct) =>
 				{
-					var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
-					return symbol is not INamedTypeSymbol structSymbol
+					// ForAttributeWithMetadataName already resolves TargetSymbol; calling
+					// SemanticModel.GetDeclaredSymbol again would re-run the same symbol resolution
+					// on every pipeline rerun, so the pre-resolved symbol is used directly.
+					var structSymbol = (INamedTypeSymbol?)ctx.TargetSymbol;
+					return structSymbol is null
 						? GeneratorResult<AttributeDataModelTarget>.Empty
 						: BuildTarget(structSymbol, ct);
 				},
-				predicate: (ctx, ct) => ctx is StructDeclarationSyntax or RecordDeclarationSyntax
+				predicate: static (ctx, ct) => ctx is StructDeclarationSyntax or RecordDeclarationSyntax
 			)
 			.WithTrackingName("GetAttributeDataTargets");
 	}
@@ -34,9 +37,9 @@ static class AttributeDataModelLibrary
 	)
 	{
 		// Validation diagnostics (ADM0001-ADM0010) are reported by AttributeDataModelValidationAnalyzer and
-		// AttributeDataModelSymbolPropertyAnalyzer; the generator only tracks whether a blocking error exists so
-		// it can gate generation without emitting the diagnostics itself.
-		var hasBlockingError = false;
+		// AttributeDataModelSymbolPropertyAnalyzer; the generator carries them on the result so it can gate
+		// generation on ShouldProcess without emitting the diagnostics itself.
+		List<ReportableDiagnostic> diagnostics = [];
 		var generateAttribute = GetAttribute(structSymbol, GeneratorTypeLibrary.Attirbutes.GenerateAttribute);
 		if (generateAttribute is null)
 			return GeneratorResult<AttributeDataModelTarget>.Empty;
@@ -45,7 +48,14 @@ static class AttributeDataModelLibrary
 		TypeIdentity targetAttribute = default;
 		if (generateAttribute.ConstructorArguments.Length == 0)
 		{
-			hasBlockingError = true;
+			diagnostics.Add(
+				ReportableDiagnostic.Create(
+					AttributeDataModelDiagnosticRules.TargetAttributeNotResolved,
+					isBlocking: true,
+					structSymbol,
+					structSymbol.Name
+				)
+			);
 		}
 		else
 		{
@@ -59,7 +69,16 @@ static class AttributeDataModelLibrary
 			else if (firstArgument is string targetAttributeName)
 				targetAttribute = ParseTypeValueObject(targetAttributeName);
 			else
-				hasBlockingError = true;
+			{
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.TargetAttributeNotResolved,
+						isBlocking: true,
+						structSymbol,
+						structSymbol.Name
+					)
+				);
+			}
 		}
 
 		var matchByInheritance = GetNamedArgument(
@@ -74,32 +93,36 @@ static class AttributeDataModelLibrary
 		);
 
 		if (autoDiscover && targetAttributeType is null)
-			hasBlockingError = true;
+		{
+			diagnostics.Add(
+				ReportableDiagnostic.Create(
+					AttributeDataModelDiagnosticRules.AutoDiscoverRequiresType,
+					isBlocking: true,
+					structSymbol,
+					structSymbol.Name
+				)
+			);
+		}
 
-		var excludedNames = new HashSet<string>(StringComparer.Ordinal);
-		var explicitProperties = ReadExplicitProperties(
-			structSymbol,
-			excludedNames,
-			ref hasBlockingError,
-			cancellationToken
-		);
+		HashSet<string> excludedNames = new(StringComparer.Ordinal);
+		var explicitProperties = ReadExplicitProperties(structSymbol, excludedNames, diagnostics, cancellationToken);
 		var discoveredProperties =
 			autoDiscover && targetAttributeType is not null
 				? DiscoverProperties(
 					targetAttributeType,
 					explicitProperties,
 					excludedNames,
-					ref hasBlockingError,
+					diagnostics,
 					cancellationToken
 				)
 				: [];
 
 		var mergedProperties = MergeProperties(explicitProperties, discoveredProperties);
 
-		if (hasBlockingError)
-			return GeneratorResult<AttributeDataModelTarget>.Empty;
+		if (diagnostics.Any(d => d.IsBlocking))
+			return GeneratorResult<AttributeDataModelTarget>.Create([.. diagnostics]);
 
-		var target = new AttributeDataModelTarget(
+		AttributeDataModelTarget target = new(
 			Namespace: structSymbol.ContainingNamespace.IsGlobalNamespace
 				? null
 				: structSymbol.ContainingNamespace.ToDisplayString(),
@@ -118,7 +141,7 @@ static class AttributeDataModelLibrary
 			Properties: new EquatableArray<AttributeDataModelProperty>(mergedProperties)
 		);
 
-		return GeneratorResult<AttributeDataModelTarget>.Create(target);
+		return GeneratorResult<AttributeDataModelTarget>.Create(target, ImmutableArray.CreateRange(diagnostics));
 	}
 
 	static EquatableArray<string> GetPrimaryConstructorArguments(
@@ -149,7 +172,7 @@ static class AttributeDataModelLibrary
 	static ImmutableArray<AttributeDataModelProperty> ReadExplicitProperties(
 		INamedTypeSymbol structSymbol,
 		HashSet<string> excludedNames,
-		ref bool hasBlockingError,
+		List<ReportableDiagnostic> diagnostics,
 		CancellationToken cancellationToken
 	)
 	{
@@ -166,13 +189,29 @@ static class AttributeDataModelLibrary
 			var propertyType = parameter.Type;
 			if (!IsSupportedType(propertyType))
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.PropertyTypeNotSupported,
+						isBlocking: true,
+						parameter,
+						propertyName,
+						propertyType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
 				continue;
 			}
 
 			if (IsSymbolOrSystemType(propertyType))
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable,
+						isBlocking: true,
+						parameter,
+						propertyName,
+						propertyType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
 				continue;
 			}
 
@@ -185,13 +224,42 @@ static class AttributeDataModelLibrary
 			}
 
 			if (info.IsNestedModel && !IsGeneratedAttributeModel(propertyType))
-				hasBlockingError = true;
+			{
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.NestedModelNotGenerated,
+						isBlocking: true,
+						parameter,
+						propertyType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
+			}
 
 			if (info.IsTypeArgument && !IsTypeIdentityType(propertyType))
-				hasBlockingError = true;
+			{
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.TypeArgumentPropertyTypeInvalid,
+						isBlocking: true,
+						parameter,
+						propertyName,
+						propertyType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
+			}
 
 			if (info.IsEnum && propertyType.SpecialType != SpecialType.System_String)
-				hasBlockingError = true;
+			{
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.IsEnumRequiresStringType,
+						isBlocking: true,
+						parameter,
+						propertyName,
+						propertyType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
+			}
 
 			var sources = info.Sources;
 			if (sources.IsEmpty)
@@ -202,8 +270,21 @@ static class AttributeDataModelLibrary
 				info.DefaultValue,
 				modelTypeName,
 				propertyType,
-				ref hasBlockingError
+				parameter,
+				diagnostics
 			);
+
+			if (isNonNullableReferenceType && !info.HasDefaultValue && !parameter.HasExplicitDefaultValue)
+			{
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.NonNullableReferenceTypeRequiresDefault,
+						isBlocking: false,
+						parameter,
+						propertyName
+					)
+				);
+			}
 
 			properties.Add(
 				new(
@@ -403,7 +484,7 @@ static class AttributeDataModelLibrary
 		ITypeSymbol targetAttributeType,
 		ImmutableArray<AttributeDataModelProperty> explicitProperties,
 		HashSet<string> excludedNames,
-		ref bool hasBlockingError,
+		List<ReportableDiagnostic> diagnostics,
 		CancellationToken cancellationToken
 	)
 	{
@@ -411,7 +492,7 @@ static class AttributeDataModelLibrary
 			return [];
 
 		var discovered = ImmutableArray.CreateBuilder<AttributeDataModelProperty>();
-		var discoveredNames = new HashSet<string>(StringComparer.Ordinal);
+		HashSet<string> discoveredNames = new(StringComparer.Ordinal);
 
 		foreach (var constructor in namedType.InstanceConstructors)
 		{
@@ -433,24 +514,36 @@ static class AttributeDataModelLibrary
 
 				if (!IsSupportedType(parameter.Type))
 				{
-					hasBlockingError = true;
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							AttributeDataModelDiagnosticRules.PropertyTypeNotSupported,
+							isBlocking: true,
+							parameter,
+							propertyName,
+							parameter.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+						)
+					);
 					continue;
 				}
 
 				if (IsSymbolOrSystemType(parameter.Type))
 				{
-					hasBlockingError = true;
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable,
+							isBlocking: true,
+							parameter,
+							propertyName,
+							parameter.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+						)
+					);
 					continue;
 				}
 
 				discoveredNames.Add(propertyName);
 
 				var (modelTypeName, isNonNullableReferenceType) = GetModelTypeInfo(parameter.Type, autoDiscover: true);
-				var defaultValueExpression = GetInferredDefaultExpression(
-					parameter,
-					modelTypeName,
-					ref hasBlockingError
-				);
+				var defaultValueExpression = GetInferredDefaultExpression(parameter, modelTypeName, diagnostics);
 
 				discovered.Add(
 					new AttributeDataModelProperty(
@@ -493,13 +586,29 @@ static class AttributeDataModelLibrary
 
 			if (!IsSupportedType(property.Type))
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.PropertyTypeNotSupported,
+						isBlocking: true,
+						property,
+						propertyName,
+						property.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
 				continue;
 			}
 
 			if (IsSymbolOrSystemType(property.Type))
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable,
+						isBlocking: true,
+						property,
+						propertyName,
+						property.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
 				continue;
 			}
 
@@ -510,7 +619,8 @@ static class AttributeDataModelLibrary
 				null,
 				modelTypeName,
 				property.Type,
-				ref hasBlockingError
+				property,
+				diagnostics
 			);
 
 			discovered.Add(
@@ -549,7 +659,7 @@ static class AttributeDataModelLibrary
 			return explicitProperties;
 
 		var merged = ImmutableArray.CreateBuilder<AttributeDataModelProperty>();
-		var explicitNames = new HashSet<string>(explicitProperties.Select(static p => p.PropertyName));
+		HashSet<string> explicitNames = [.. explicitProperties.Select(static p => p.PropertyName)];
 
 		merged.AddRange(explicitProperties);
 		foreach (var discovered in discoveredProperties)
@@ -565,7 +675,8 @@ static class AttributeDataModelLibrary
 		object? defaultValue,
 		string modelTypeName,
 		ITypeSymbol originalType,
-		ref bool hasBlockingError
+		ISymbol target,
+		List<ReportableDiagnostic> diagnostics
 	)
 	{
 		if (defaultValue is not null)
@@ -573,7 +684,15 @@ static class AttributeDataModelLibrary
 			if (TryFormatValue(defaultValue, originalType, out var expression))
 				return expression;
 
-			hasBlockingError = true;
+			diagnostics.Add(
+				ReportableDiagnostic.Create(
+					AttributeDataModelDiagnosticRules.DefaultValueNotSupported,
+					isBlocking: true,
+					target,
+					Convert.ToString(defaultValue, CultureInfo.InvariantCulture) ?? "null",
+					originalType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+				)
+			);
 		}
 
 		return $"default({modelTypeName})";
@@ -582,7 +701,7 @@ static class AttributeDataModelLibrary
 	static string GetInferredDefaultExpression(
 		IParameterSymbol parameter,
 		string modelTypeName,
-		ref bool hasBlockingError
+		List<ReportableDiagnostic> diagnostics
 	)
 	{
 		return parameter.HasExplicitDefaultValue
@@ -590,7 +709,8 @@ static class AttributeDataModelLibrary
 				parameter.ExplicitDefaultValue,
 				modelTypeName,
 				parameter.Type,
-				ref hasBlockingError
+				parameter,
+				diagnostics
 			)
 			: $"default({modelTypeName})";
 	}
@@ -651,7 +771,7 @@ static class AttributeDataModelLibrary
 
 	static string EscapeString(string value)
 	{
-		var builder = new StringBuilder(value.Length);
+		StringBuilder builder = new(value.Length);
 		foreach (var c in value)
 		{
 			builder.Append(
@@ -825,7 +945,7 @@ static class AttributeDataModelLibrary
 		if (string.IsNullOrEmpty(value))
 			return value;
 
-		var builder = new StringBuilder(value.Length);
+		StringBuilder builder = new(value.Length);
 		var newWord = true;
 		foreach (var c in value)
 		{

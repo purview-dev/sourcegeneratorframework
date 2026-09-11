@@ -1582,7 +1582,7 @@ public sealed partial class CodeWriter
 			return "global::System.AttributeTargets.All";
 
 		var names = targets.ToString().Split(',');
-		var builder = new StringBuilder();
+		StringBuilder builder = new();
 		for (var index = 0; index < names.Length; index++)
 		{
 			if (index != 0)
@@ -2622,7 +2622,7 @@ public sealed partial class CodeWriter
 		for (var index = 0; index < rootArguments.Length; index++)
 			ValidateStatementPart(rootArguments[index], nameof(arguments));
 
-		var builder = new MethodChainBuilder(rootMethod, rootArguments, genericArguments);
+		MethodChainBuilder builder = new(rootMethod, rootArguments, genericArguments);
 		configure(builder);
 
 		return RenderMethodChain(builder, isAwaited);

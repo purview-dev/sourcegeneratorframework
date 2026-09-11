@@ -308,6 +308,40 @@ public readonly partial record struct RequiredAttributeData;
 	}
 
 	[Test]
+	public async Task Generate_NonNullableReferenceTypeWithoutDefault_StillGenerates(
+		CancellationToken cancellationToken
+	)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework.Generators;
+			using System.ComponentModel.DataAnnotations;
+
+			namespace Test
+			{
+				[Generate(typeof(RequiredAttribute))]
+				public readonly partial record struct RequiredAttributeData(
+					string Name
+				);
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		// ADM0006 is non-blocking and reported by the analyzer; the generator still emits the model.
+		await Assert.That(result.DriverResult.Diagnostics).DoesNotContain(d => d.Id == "ADM0006");
+
+		var generated = await GetGeneratedStringAsync(
+			result,
+			"RequiredAttributeData.AttributeDataModel.g.cs",
+			cancellationToken
+		);
+		await Assert.That(generated).IsNotNull();
+		await Assert.That(generated).Contains("readonly partial record struct RequiredAttributeData");
+		await Assert.That(generated).Contains("string Name");
+		await Assert.That(generated).Contains("new(false, default(string)!)");
+	}
+
+	[Test]
 	public async Task Generate_StringTargetAttributeData_NamedArgument(CancellationToken cancellationToken)
 	{
 		var source = """
@@ -655,7 +689,7 @@ public readonly partial record struct RequiredAttributeData;
 		var runtimeErrors = runtimeCompilationDiagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 		await Assert.That(runtimeErrors).IsEmpty();
 
-		await using var assemblyStream = new MemoryStream();
+		await using MemoryStream assemblyStream = new();
 		var emitResult = runtimeCompilation.Emit(assemblyStream, cancellationToken: cancellationToken);
 		await Assert.That(emitResult.Success).IsTrue();
 

@@ -63,7 +63,7 @@ static class CodeWriterLiteralClassifier
 			case InterpolatedStringExpressionSyntax interpolated:
 #pragma warning disable format
 			{
-				var builder = new StringBuilder();
+				StringBuilder builder = new();
 				foreach (var content in interpolated.Contents)
 				{
 					if (content is InterpolatedStringTextSyntax textPart)

@@ -79,7 +79,7 @@ public class CodeQueryTests
 
 		var intType = TypeReference.Create<int>();
 		var nullableInt = TypeReference.Create<int>().Nullable();
-		var complexType = new TypeReference(new TypeIdentity("ComplexType", "Test"));
+		TypeReference complexType = new(new TypeIdentity("ComplexType", "Test"));
 
 		var method = query.GetMethod("DoWork", intType, nullableInt, complexType);
 		await Assert.That(method.Node.Identifier.ValueText).IsEqualTo("DoWork");
@@ -163,11 +163,11 @@ public class CodeQueryTests
 	{
 		var query = CreateQuery();
 
-		var sample = new TypeReference(new TypeIdentity("Sample", "Test"));
-		var contract = new TypeReference(new TypeIdentity("IContract", "Test"));
-		var level = new TypeReference(new TypeIdentity("Level", "Test"));
-		var handler = new TypeReference(new TypeIdentity("Handler", "Test"));
-		var person = new TypeReference(new TypeIdentity("Person", "Test"));
+		TypeReference sample = new(new TypeIdentity("Sample", "Test"));
+		TypeReference contract = new(new TypeIdentity("IContract", "Test"));
+		TypeReference level = new(new TypeIdentity("Level", "Test"));
+		TypeReference handler = new(new TypeIdentity("Handler", "Test"));
+		TypeReference person = new(new TypeIdentity("Person", "Test"));
 
 		await Assert.That(query.GetClass(sample).Node.Identifier.ValueText).IsEqualTo("Sample");
 		await Assert.That(query.HasClass(sample)).IsTrue();
@@ -192,7 +192,7 @@ public class CodeQueryTests
 	public async Task TypeDeclarationQueries_WithTypeIdentityValue_ImplicitlyConverts()
 	{
 		var query = CreateQuery();
-		var sample = new TypeIdentity("Sample", "Test");
+		TypeIdentity sample = new("Sample", "Test");
 
 		await Assert.That(query.GetClass(sample).Node.Identifier.ValueText).IsEqualTo("Sample");
 		await Assert.That(query.HasClass(sample)).IsTrue();
@@ -205,7 +205,7 @@ public class CodeQueryTests
 	public async Task TryGetClass_WithTypeReferenceIdentity_ReturnsNode()
 	{
 		var query = CreateQuery();
-		var sample = new TypeReference(new TypeIdentity("Sample", "Test"));
+		TypeReference sample = new(new TypeIdentity("Sample", "Test"));
 
 		await Assert.That(query.TryGetClass(sample, out var declaration)).IsTrue();
 		await Assert.That(declaration).IsNotNull();
@@ -233,7 +233,7 @@ public class CodeQueryTests
 			public struct Money { }
 			""";
 		var (compilation, _) = TestCompilation.CreateWithRoot(source);
-		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+		CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
 
 		// Act / Assert
 		await Assert
@@ -272,7 +272,7 @@ public class CodeQueryTests
 	public async Task TryGetSyntaxTree_MatchesBySuffix()
 	{
 		var tree = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(Source, path: "Generated/File.g.cs");
-		var query = new CodeQuery([tree]);
+		CodeQuery query = new([tree]);
 
 		await Assert.That(query.HasSyntaxTree("File.g.cs")).IsTrue();
 		await Assert.That(query.HasSyntaxTree("Other.g.cs")).IsFalse();
@@ -352,7 +352,7 @@ public class CodeQueryTests
 			}
 			""";
 		var (compilation, _) = TestCompilation.CreateWithRoot(source);
-		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+		CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
 
 		// Act / Assert
 		await Assert.That(query.HasOperator("==")).IsTrue();
@@ -386,8 +386,8 @@ public class CodeQueryTests
 			}
 			""";
 		var (compilation, _) = TestCompilation.CreateWithRoot(source);
-		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
-		var moneyType = new TypeReference(new TypeIdentity("Money", "Test"));
+		CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
+		TypeReference moneyType = new(new TypeIdentity("Money", "Test"));
 		var stringType = TypeReference.Create<string>();
 
 		// Act / Assert
@@ -413,8 +413,8 @@ public class CodeQueryTests
 			}
 			""";
 		var (compilation, _) = TestCompilation.CreateWithRoot(source);
-		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
-		var moneyType = new TypeReference(new TypeIdentity("Money", "Test"));
+		CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
+		TypeReference moneyType = new(new TypeIdentity("Money", "Test"));
 		var intType = TypeReference.Create<int>();
 		var stringType = TypeReference.Create<string>();
 
@@ -464,7 +464,7 @@ public class CodeQueryTests
 			}
 			""";
 		var (compilation, _) = TestCompilation.CreateWithRoot(source);
-		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+		CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
 
 		// Act / Assert
 		await Assert.That(query.HasTry()).IsTrue();

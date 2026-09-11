@@ -75,7 +75,7 @@ dotnet add package Purview.SourceGeneratorFramework
 - **`IncrementalPipeline`** — extension methods for composing `IncrementalValueProvider<T>` and `IncrementalValuesProvider<T>` pipelines, including attribute-based discovery, generation context creation, and disable-property checks.
 - **`GenerationContext`** — a base execution-services context that carries the Roslyn `Compilation`, immutable generator settings, optional logging, and a factory for independently owned `CodeWriter` instances.
 - **`GeneratorResult<T>`** — a value-or-diagnostics result type for incremental source generator transforms.
-- **`TypeValueObject`**, **`TargetSymbolDescriptor`**, **`EquatableArray<T>`**, **`DiagnosticInfo`** — reusable models for generator inputs and outputs.
+- **`TypeValueObject`**, **`TargetSymbolDescriptor`**, **`EquatableArray<T>`**, **`ReportableDiagnostic`** — reusable models for generator inputs and outputs.
 - **`SymbolResolver`**, **`TypeHelpers`**, **`EmbeddedResources`** — helper classes for common symbol and resource tasks.
 - **`AttributeDataModelGenerator`** — bundled source generator that emits `readonly record struct` attribute parser models from `[GenerateAttributeDataModel]` declarations, eliminating repetitive `FromAttributeData` boilerplate. Supports manual mapping, auto-discovery, nested models, and inheritance matching.
 - **Bundled Roslyn analyzers** — `Purview.SourceGeneratorFramework.Analyzers` ships as an analyzer asset inside the `Purview.SourceGeneratorFramework` package and reports diagnostics such as `PSGFR11` (prefer `ForAttributeWithMetadataName`), `PSGFR12` (use `IIncrementalGenerator`), and `PSGFR14` (avoid `RegisterImplementationSourceOutput`).
@@ -115,11 +115,7 @@ public sealed class MyGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var contextProvider = IncrementalPipeline.DefaultGenerationContextValueProvider(
-            context,
-            nameof(MyGenerator),
-            "1.0.0"
-        );
+        var contextProvider = IncrementalPipeline.DefaultGenerationContextValueProvider<MyGenerator>(context);
 
         var targets = IncrementalPipeline.ForAttributeWithMetadataName(
             context,
@@ -229,15 +225,11 @@ var targets = IncrementalPipeline.ForAttributeWithMetadataName(
         var symbol = ctx.TargetSymbol;
         return symbol is null
             ? GeneratorResult<string>.Empty
-            : GeneratorResult<string>.Ok(symbol.Name);
+            : GeneratorResult<string>.Create(symbol.Name);
     }
 );
 
-var contextProvider = IncrementalPipeline.DefaultGenerationContextValueProvider(
-    context,
-    nameof(MyGenerator),
-    "1.0.0"
-);
+var contextProvider = IncrementalPipeline.DefaultGenerationContextValueProvider<MyGenerator>(context);
 
 IncrementalPipeline.RegisterSourceOutput(
     context,
@@ -251,6 +243,56 @@ IncrementalPipeline.RegisterSourceOutput(
     }
 );
 ```
+
+The registered callback runs only when `GeneratorResult<T>.ShouldProcess` is `true` — the result carries a
+value and none of its carried diagnostics are blocking.
+
+## Diagnostics that don't stop generation
+
+`ReportableDiagnostic.IsBlocking` is an explicit, per-diagnostic decision, independent of the diagnostic's
+severity. `GeneratorResult<T>.ShouldProcess` is `true` when the result carries a value and none of its
+diagnostics are blocking, so an `Error`-severity diagnostic can still allow generation to continue. This is
+useful when the generated code helps the developer fix the problem — for example, a generator that emits an
+abstract base class with methods the user must override can report an error for each missing override while
+still emitting the base class, so the user can see exactly what to implement:
+
+```csharp
+static readonly DiagnosticDescriptor MissingOverride = new(
+    "MYGEN001",
+    "Missing override",
+    "Type '{0}' must override '{1}'",
+    "Usage",
+    DiagnosticSeverity.Error,
+    isEnabledByDefault: true
+);
+
+var targets = IncrementalPipeline.ForAttributeWithMetadataName(
+    context,
+    AttributeType,
+    static (ctx, ct) =>
+    {
+        var symbol = ctx.TargetSymbol;
+        var model = new BaseModel(symbol.Name);
+
+        // An error-severity diagnostic that explicitly allows generation to continue:
+        // IsBlocking is false, so ShouldProcess stays true and the base class is emitted.
+        var diagnostic = ReportableDiagnostic.Create(
+            MissingOverride,
+            isBlocking: false,
+            symbol,
+            symbol.Name,
+            "Execute"
+        );
+
+        return GeneratorResult<BaseModel>.Create(model, diagnostic);
+    }
+);
+```
+
+Blocking diagnostics (`isBlocking: true`) stop generation for that target while still being reported.
+`GeneratorResult<T>.HasBlockingDiagnostics` reports whether any carried diagnostic blocked processing;
+`HasErrorDiagnostics` reports the severity-based view (whether any diagnostic has an `Error`
+`DefaultSeverity`).
 
 ## Keep CodeWriter out of incremental contexts
 
@@ -917,11 +959,22 @@ The `Purview.SourceGeneratorFramework` package includes the `Purview.SourceGener
 | `PSGFR20` | Prefer the minimal `CodeWriter` overloads over constructing `*DeclarationOptions` values manually. |
 | `PSGFR21` | Prefer `HashDefines`/`HashDefinesScope` for `#if`/`#endif` conditional-compilation directives. |
 | `PSGFR22` | Prefer `PragmaDisable`/`OpenPragmasScope` for `#pragma warning` directives. |
+| `PSGFR23` | Prefer structured `IfBlock`/`ElseIf`/`Else` over raw `if` block text. |
 | `PSGFR24` | `CodeFixProvider` is not marked `[ExportCodeFixProvider]`; Visual Studio will never discover it. |
 | `PSGFR25` | `DiagnosticAnalyzer` is not marked `[DiagnosticAnalyzer]`; it will never run. |
 | `PSGFR26` | A generator type is not marked `[Generator]`; it will never run. |
 | `PSGFR27` | A Roslyn component type is not public; the compiler host cannot instantiate it. |
 | `PSGFR28` | `FixableDiagnosticIds` references a diagnostic ID no analyzer in the compilation produces; the fix will never be shown. |
+| `PSGFR29` | Do not embed a `CodeWriter` in a string; use `XmlCommentWriter.XmlInlineCode` instead. |
+| `PSGFR30` | Prefer `static` lambdas in incremental pipeline methods so the compiler never allocates a closure on the per-item hot path. |
+| `PSGFR31` | Prefer `GeneratorAttributeSyntaxContext.TargetSymbol` over `SemanticModel.GetDeclaredSymbol(ctx.TargetNode)`. |
+| `PSGFR32` | Avoid `NormalizeWhitespace` when generating source; use an indented text writer such as `CodeWriter`. |
+| `PSGFR33` | Pipeline models must not retain Roslyn objects (`ISymbol`, `SyntaxNode`, `Location`, ...); extract the information into value types. |
+| `PSGFR34` | Prefer C# 14 `extension(Receiver)` blocks over classic static `this`-parameter extension methods. |
+| `PSGFR35` | Extension class name must match the extended type (`{Receiver}Extensions`). |
+| `PSGFR36` | Extension classes must be placed in the extended type's namespace under an `Extensions` folder. |
+| `PSGFR37` | One extension class per receiver type; split classes that extend multiple types. |
+| `PSGFR38` | Extension classes should carry `[EditorBrowsable(EditorBrowsableState.Never)]` and a file-level `#pragma warning disable CS1591`. |
 
 ## License
 

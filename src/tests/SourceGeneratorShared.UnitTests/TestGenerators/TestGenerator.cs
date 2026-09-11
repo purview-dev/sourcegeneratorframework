@@ -11,11 +11,9 @@ public sealed class TestGenerator : IIncrementalGenerator
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
 			new TypeIdentity("TestAttribute", null),
-			static (ctx, ct) =>
-			{
-				var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
-				return new TargetInfo(symbol?.Name ?? "Unknown");
-			},
+			static (ctx, _) =>
+				// ForAttributeWithMetadataName already resolves TargetSymbol.
+				new TargetInfo(ctx.TargetSymbol.Name),
 			predicate: static (node, _) => node is Microsoft.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax
 		);
 

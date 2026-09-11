@@ -71,7 +71,7 @@ public class CodeQueryResultTests
 		var query = CreateQuery();
 		var intType = TypeReference.Create<int>();
 		var nullableInt = TypeReference.Create<int>().Nullable();
-		var complexType = new TypeReference(new TypeIdentity("ComplexType", "Test"));
+		TypeReference complexType = new(new TypeIdentity("ComplexType", "Test"));
 
 		await Assert.That(query.GetClass("Sample").HasProperty("Count", intType)).IsTrue();
 		await Assert
@@ -96,7 +96,7 @@ public class CodeQueryResultTests
 			public class Marked { }
 			""";
 		var (compilation, _) = TestCompilation.CreateWithRoot(source);
-		var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+		CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
 
 		// Act / Assert
 		var @class = query.GetClass("Marked");

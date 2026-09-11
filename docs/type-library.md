@@ -176,4 +176,10 @@ duplicate members, invalid class name, invalid namespace, invalid member accessi
 without an initializer, marker members without an explicit `= default`, a spec that is not declared
 `partial`, and a spec class whose name collides with the generated type library class — `TLB0012` when
 they share a namespace, `TLB0013` when they do not). `TLB0002`, `TLB0008`, `TLB0010`, `TLB0011`,
-`TLB0012`, and `TLB0013` have code fixes. Specs that carry a blocking error are skipped by the generator.
+`TLB0012`, and `TLB0013` have code fixes.
+
+The generator carries these same diagnostics on its `GeneratorResult` and gates generation on
+`ShouldProcess`. Most are blocking (`IsBlocking: true`) and stop generation, but the non-blocking rules —
+`TLB0010` (marker without `= default`) and `TLB0013` (warning) — allow generation to continue, so a spec
+with those issues still produces the type library. See
+[`GeneratorResult` diagnostics that don't stop generation](../src/src/SourceGeneratorFramework/Sdk/README.md#diagnostics-that-dont-stop-generation).

@@ -10,11 +10,11 @@ public sealed class DiagnosticTestGenerator : IIncrementalGenerator
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
 			new TypeIdentity("TestAttribute", null),
-			static (ctx, ct) =>
+			static (ctx, _) =>
 			{
-				var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
-				var name = symbol?.Name ?? "Unknown";
-				var diagnostic = DiagnosticInfo.Create(
+				// ForAttributeWithMetadataName already resolves TargetSymbol.
+				var name = ctx.TargetSymbol.Name;
+				var diagnostic = ReportableDiagnostic.Create(
 					new DiagnosticDescriptor(
 						"TEST001",
 						"Test diagnostic",
@@ -23,6 +23,7 @@ public sealed class DiagnosticTestGenerator : IIncrementalGenerator
 						DiagnosticSeverity.Info,
 						isEnabledByDefault: true
 					),
+					isBlocking: false,
 					Location.None
 				);
 				return GeneratorResult<TargetInfo>.Create(new TargetInfo(name), diagnostic);

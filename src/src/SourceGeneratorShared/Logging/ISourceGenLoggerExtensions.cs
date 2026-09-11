@@ -63,7 +63,7 @@ public static class ISourceGenLoggerExtensions
 		/// </summary>
 		/// <param name="diagnostic">The diagnostic information to log.</param>
 		/// <param name="args">The message arguments.</param>
-		public void Diagnostic(DiagnosticInfo diagnostic, params object[] args) =>
+		public void Diagnostic(ReportableDiagnostic diagnostic, params object[] args) =>
 			Diagnostic(logger, diagnostic, 0, args);
 
 		/// <summary>
@@ -73,16 +73,16 @@ public static class ISourceGenLoggerExtensions
 		/// <param name="indentation">The indentation level for the log message.</param>
 		/// <param name="args">The message arguments.</param>
 		/// <exception cref="ArgumentNullException">Thrown if the diagnostic is null.</exception>
-		public void Diagnostic(DiagnosticInfo diagnostic, int indentation, params object[] args)
+		public void Diagnostic(ReportableDiagnostic diagnostic, int indentation, params object[] args)
 		{
 			if (diagnostic is null)
 				throw new ArgumentNullException(nameof(diagnostic));
 
-			var d = diagnostic.ToDiagnostic();
+			// Format the message directly from the descriptor so logging never allocates a Diagnostic.
 			logger.Log(
 				SourceGenLogLevel.Diagnostic,
 				indentation,
-				$"{d.Id}: {d.GetMessage(CultureInfo.InvariantCulture)}",
+				$"{diagnostic.Id}: {diagnostic.GetMessage(CultureInfo.InvariantCulture)}",
 				args
 			);
 		}

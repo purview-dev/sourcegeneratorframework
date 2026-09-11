@@ -71,7 +71,7 @@ static class SourceGeneratorHelpers
 		if (namespaces.IsDefaultOrEmpty)
 			return source;
 
-		var builder = new StringBuilder(source.Length + (namespaces.Length * 20));
+		StringBuilder builder = new(source.Length + (namespaces.Length * 20));
 		foreach (var ns in namespaces)
 		{
 			builder.Append("using ").Append(ns).AppendLine(";");

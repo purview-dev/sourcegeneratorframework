@@ -154,7 +154,7 @@ public sealed class TypeSyntaxMatchingTests
 	public async Task CouldMatchTypeReference_GivenPredefinedType_MatchesKeyword(string written, bool expected)
 	{
 		var typeSyntax = SyntaxFactory.ParseTypeName(written);
-		var value = new TypeIdentity(SpecialType.System_Int32);
+		TypeIdentity value = new(SpecialType.System_Int32);
 
 		await Assert.That(value.CouldMatchTypeReference(typeSyntax)).IsEqualTo(expected);
 	}
@@ -324,7 +324,7 @@ public sealed class TypeSyntaxMatchingTests
 		);
 
 		var model = compilation.GetSemanticModel(root.SyntaxTree);
-		var guid = new TypeIdentity("Guid", "System");
+		TypeIdentity guid = new("Guid", "System");
 
 		var field = root.DescendantNodes().OfType<FieldDeclarationSyntax>().First();
 		var property = root.DescendantNodes().OfType<PropertyDeclarationSyntax>().Single();
@@ -353,7 +353,7 @@ public sealed class TypeSyntaxMatchingTests
 		var (_, root) = TestCompilation.Parse($"namespace Sample;\n\n{attributeText}\npublic class Target {{ }}");
 
 		var attribute = root.DescendantNodes().OfType<AttributeSyntax>().Single();
-		var value = new TypeIdentity("SentinelAttribute", "Sample");
+		TypeIdentity value = new("SentinelAttribute", "Sample");
 
 		await Assert.That(value.CouldMatchAttribute(attribute)).IsEqualTo(expected);
 	}
@@ -378,7 +378,7 @@ public sealed class TypeSyntaxMatchingTests
 		);
 
 		var model = compilation.GetSemanticModel(root.SyntaxTree);
-		var value = new TypeIdentity("SentinelAttribute", "Sample");
+		TypeIdentity value = new("SentinelAttribute", "Sample");
 
 		var flagged = root.DescendantNodes()
 			.OfType<ClassDeclarationSyntax>()

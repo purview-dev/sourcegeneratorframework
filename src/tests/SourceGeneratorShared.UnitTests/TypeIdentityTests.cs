@@ -17,7 +17,7 @@ public sealed class TypeIdentityTests
 	{
 		var compilation = TestCompilation.Create();
 		var symbol = compilation.GetTypeByMetadataName(metadataName)!;
-		var value = new TypeIdentity(symbol);
+		TypeIdentity value = new(symbol);
 
 		await Assert.That(value.Matches(symbol)).IsTrue();
 		await Assert.That(value.SpecialType).IsNotEqualTo(SpecialType.None);
@@ -30,7 +30,7 @@ public sealed class TypeIdentityTests
 		var symbol = compilation.GetTypeByMetadataName("System.Int32")!;
 
 		// Constructed without keyword knowledge, so SpecialType is None on this side.
-		var value = new TypeIdentity("Int32", "System");
+		TypeIdentity value = new("Int32", "System");
 
 		await Assert.That(value.SpecialType).IsEqualTo(SpecialType.None);
 		await Assert.That(value.Matches(symbol)).IsTrue();
@@ -56,8 +56,8 @@ public sealed class TypeIdentityTests
 		// Guards the premise: Roslyn stamps SpecialType well beyond the C# keyword types.
 		await Assert.That(symbol.SpecialType).IsNotEqualTo(SpecialType.None);
 
-		var fromSymbol = new TypeIdentity(symbol);
-		var fromName = new TypeIdentity(symbol.Name, symbol.ContainingNamespace.ToDisplayString());
+		TypeIdentity fromSymbol = new(symbol);
+		TypeIdentity fromName = new(symbol.Name, symbol.ContainingNamespace.ToDisplayString());
 
 		await Assert.That(fromSymbol.Matches(symbol)).IsTrue();
 		await Assert.That(fromName.Matches(symbol)).IsTrue();
@@ -123,8 +123,8 @@ public sealed class TypeIdentityTests
 		var nested = compilation.GetTypeByMetadataName("Sample.Outer+Inner")!;
 		var topLevel = compilation.GetTypeByMetadataName("Sample.Inner")!;
 
-		var nestedValue = new TypeIdentity(nested);
-		var topLevelValue = new TypeIdentity(topLevel);
+		TypeIdentity nestedValue = new(nested);
+		TypeIdentity topLevelValue = new(topLevel);
 
 		await Assert.That(nestedValue.Matches(nested)).IsTrue();
 		await Assert.That(nestedValue.Matches(topLevel)).IsFalse();
@@ -226,7 +226,7 @@ public sealed class TypeIdentityTests
 	public async Task TypeArguments_GivenArrayArgument_ArePreserved()
 	{
 		var symbol = TestCompilation.FieldType("public List<int[]> Value = null!;");
-		var value = new TypeIdentity(symbol);
+		TypeIdentity value = new(symbol);
 
 		await Assert.That(value.IsGenericTypeDefinition).IsFalse();
 		await Assert.That(value.TypeArguments.Length).IsEqualTo(1);
@@ -243,7 +243,7 @@ public sealed class TypeIdentityTests
 	public async Task TypeArguments_GivenTypeParameterArgument_ArePreserved()
 	{
 		var symbol = TestCompilation.FieldType("public List<T> Value = null!;");
-		var value = new TypeIdentity(symbol);
+		TypeIdentity value = new(symbol);
 
 		await Assert.That(value.IsGenericTypeDefinition).IsFalse();
 		await Assert.That(value.TypeArguments[0].Kind).IsEqualTo(TypeReferenceKind.TypeParameter);
@@ -258,7 +258,7 @@ public sealed class TypeIdentityTests
 	public async Task TypeArguments_GivenNullableValueTypeArgument_ArePreserved()
 	{
 		var symbol = TestCompilation.FieldType("public List<int?> Value = null!;");
-		var value = new TypeIdentity(symbol);
+		TypeIdentity value = new(symbol);
 
 		await Assert.That(value.TypeArguments[0].IsNullable).IsTrue();
 		await Assert.That(value.RenderFullName).IsEqualTo("global::System.Collections.Generic.List<int?>");
@@ -270,7 +270,7 @@ public sealed class TypeIdentityTests
 	public async Task TypeArguments_GivenNestedGenericArgument_ArePreserved()
 	{
 		var symbol = TestCompilation.FieldType("public Dictionary<string, List<int>> Value = null!;");
-		var value = new TypeIdentity(symbol);
+		TypeIdentity value = new(symbol);
 
 		await Assert.That(value.TypeArguments.Length).IsEqualTo(2);
 		await Assert.That(value.Matches(symbol)).IsTrue();
@@ -303,7 +303,7 @@ public sealed class TypeIdentityTests
 	{
 		var compilation = TestCompilation.Create("public class Rootless { }");
 		var symbol = compilation.GetTypeByMetadataName("Rootless")!;
-		var value = new TypeIdentity("Rootless", null);
+		TypeIdentity value = new("Rootless", null);
 
 		await Assert.That(value.IsGlobalNamespace).IsTrue();
 		await Assert.That(value.Matches(symbol)).IsTrue();
@@ -334,7 +334,7 @@ public sealed class TypeIdentityTests
 		);
 
 		var holder = compilation.GetTypeByMetadataName("Sample.Holder")!;
-		var guid = new TypeIdentity("Guid", "System");
+		TypeIdentity guid = new("Guid", "System");
 
 		await Assert.That(guid.Matches(holder.GetMembers("Field").Single())).IsTrue();
 		await Assert.That(guid.Matches(holder.GetMembers("Property").Single())).IsTrue();
@@ -343,7 +343,7 @@ public sealed class TypeIdentityTests
 		var method = (IMethodSymbol)holder.GetMembers("Method").Single();
 		await Assert.That(guid.Matches(method.Parameters[0])).IsTrue();
 
-		var eventHandler = new TypeIdentity("EventHandler", "System");
+		TypeIdentity eventHandler = new("EventHandler", "System");
 		await Assert.That(eventHandler.Matches(holder.GetMembers("Event").OfType<IEventSymbol>().Single())).IsTrue();
 
 		await Assert.That(guid.Matches(holder.GetMembers("Event").OfType<IEventSymbol>().Single())).IsFalse();
@@ -457,7 +457,7 @@ public sealed class TypeIdentityTests
 	[Test]
 	public async Task Constructor_GivenArity_SetsGenericArity()
 	{
-		var value = new TypeIdentity("Func", "System", 1);
+		TypeIdentity value = new("Func", "System", 1);
 
 		await Assert.That(value.GenericArity).IsEqualTo(1);
 		await Assert.That(value.IsGenericTypeDefinition).IsTrue();
@@ -468,7 +468,7 @@ public sealed class TypeIdentityTests
 	[Test]
 	public async Task Constructor_GivenDefaultArity_PreservesNonGenericBehavior()
 	{
-		var value = new TypeIdentity("List", "System.Collections.Generic");
+		TypeIdentity value = new("List", "System.Collections.Generic");
 
 		await Assert.That(value.GenericArity).IsEqualTo(0);
 		await Assert.That(value.IsGenericTypeDefinition).IsFalse();

@@ -3,8 +3,8 @@ using Purview.SourceGeneratorFramework.Testing.TUnit;
 
 namespace Purview.SourceGeneratorFramework.Analyzers;
 
-public sealed class PreferStructuredCodeWriterApiAnalyzerTests
-	: TUnitDiagnosticAnalyzerTestBase<PreferStructuredCodeWriterApiAnalyzer>
+public sealed class PreferStructuredCodeWriterAPIAnalyzerTests
+	: TUnitDiagnosticAnalyzerTestBase<PreferStructuredCodeWriterAPIAnalyzer>
 {
 	[Test]
 	public async Task Line_WithClassDeclaration_ReportsDiagnostic(CancellationToken cancellationToken)
@@ -32,7 +32,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzerTests
 
 		// Assert
 		await Assert.That(result).HasDiagnostics(1);
-		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterApiAnalyzer.Rule.Id);
+		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterAPIAnalyzer.Rule.Id);
 	}
 
 	[Test]
@@ -145,7 +145,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzerTests
 
 		// Assert
 		await Assert.That(result).HasDiagnostics(1);
-		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterApiAnalyzer.Rule.Id);
+		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterAPIAnalyzer.Rule.Id);
 	}
 
 	[Test]
@@ -174,7 +174,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzerTests
 
 		// Assert
 		await Assert.That(result).HasDiagnostics(1);
-		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterApiAnalyzer.Rule.Id);
+		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterAPIAnalyzer.Rule.Id);
 	}
 
 	[Test]
@@ -205,7 +205,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzerTests
 
 		// Assert
 		await Assert.That(result).HasDiagnostics(1);
-		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterApiAnalyzer.Rule.Id);
+		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterAPIAnalyzer.Rule.Id);
 	}
 
 	[Test]
@@ -234,7 +234,7 @@ public sealed class PreferStructuredCodeWriterApiAnalyzerTests
 
 		// Assert
 		await Assert.That(result).HasDiagnostics(1);
-		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterApiAnalyzer.Rule.Id);
+		await Assert.That(result).HasDiagnostic(PreferStructuredCodeWriterAPIAnalyzer.Rule.Id);
 	}
 
 	[Test]

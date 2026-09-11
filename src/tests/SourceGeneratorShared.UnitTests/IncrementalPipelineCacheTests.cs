@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using Purview.SourceGeneratorFramework.TestGenerators;
 using StepReason = Microsoft.CodeAnalysis.IncrementalStepRunReason;
 
@@ -26,21 +25,10 @@ public class IncrementalPipelineCacheTests
 			.WithAdditionalSources(TestAttributeSource)
 			.WithExcludeGeneratedSourceHintNames("TestAttribute");
 
-	static ImmutableDictionary<string, ImmutableArray<StepReason>> StepReasons(IncrementalCacheRun run)
-	{
-		var builder = ImmutableDictionary.CreateBuilder<string, ImmutableArray<StepReason>>();
-		foreach (var pair in run.Steps)
-		{
-			builder[pair.Key] = [.. pair.Value.SelectMany(step => step.Outputs.Select(static output => output.Reason))];
-		}
-
-		return builder.ToImmutable();
-	}
-
 	[Test]
 	public async Task FirstRun_AllStagesAreNew(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 
 		var result = await runner.RunIncrementalAsync(
 			[new IncrementalRunInput([AttributedSource])],
@@ -48,32 +36,18 @@ public class IncrementalPipelineCacheTests
 			cancellationToken
 		);
 
-		var reasons = StepReasons(result.Runs[0]);
-		await Assert.That(reasons).IsNotEmpty();
-		await Assert
-			.That(reasons.Values.SelectMany(static reasons => reasons).All(static r => r == StepReason.New))
-			.IsTrue();
+		await Assert.That(result.Runs[0]).AllStepsNew();
 	}
 
 	[Test]
 	public async Task IdenticalRerun_AllStagesCached(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 
 		var result = await runner.RunIncrementalAsync([AttributedSource], CreateOptions(), cancellationToken);
 
-		var first = StepReasons(result.Runs[0]);
-		var second = StepReasons(result.Runs[1]);
-
-		await Assert.That(second).IsNotEmpty();
-		await Assert
-			.That(
-				second
-					.Values.SelectMany(static reasons => reasons)
-					.All(static r => r is StepReason.Cached or StepReason.Unchanged)
-			)
-			.IsTrue();
-		await Assert.That(first["ForAttribute_TestAttribute"].All(static r => r == StepReason.New)).IsTrue();
+		await Assert.That(result.Runs[1]).AllStepsCachedOrUnchanged();
+		await Assert.That(result.Runs[0]).HasStepReason("ForAttribute_TestAttribute", StepReason.New);
 	}
 
 	[Test]
@@ -81,7 +55,7 @@ public class IncrementalPipelineCacheTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 
 		var result = await runner.RunIncrementalAsync(
 			[new IncrementalRunInput([AttributedSource]), new IncrementalRunInput([ChangedAttributedSource])],
@@ -89,12 +63,8 @@ public class IncrementalPipelineCacheTests
 			cancellationToken
 		);
 
-		var second = StepReasons(result.Runs[1]);
-
-		await Assert.That(second["ForAttribute_TestAttribute"]).Contains(StepReason.Modified);
-		await Assert
-			.That(second["GetMSBuildPropertyValue_DisableTestGenerator"].All(static r => r == StepReason.Cached))
-			.IsTrue();
+		await Assert.That(result.Runs[1]).StepIsModified("ForAttribute_TestAttribute");
+		await Assert.That(result.Runs[1]).StepIsCached("GetMSBuildPropertyValue_DisableTestGenerator");
 	}
 
 	[Test]
@@ -102,7 +72,7 @@ public class IncrementalPipelineCacheTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 
 		var result = await runner.RunIncrementalAsync(
 			[
@@ -113,10 +83,8 @@ public class IncrementalPipelineCacheTests
 			cancellationToken
 		);
 
-		var second = StepReasons(result.Runs[1]);
-
-		await Assert.That(second["GetMSBuildPropertyValue_DisableTestGenerator"]).Contains(StepReason.Modified);
-		await Assert.That(second["ForAttribute_TestAttribute"].All(static r => r == StepReason.Cached)).IsTrue();
+		await Assert.That(result.Runs[1]).StepIsModified("GetMSBuildPropertyValue_DisableTestGenerator");
+		await Assert.That(result.Runs[1]).StepIsCached("ForAttribute_TestAttribute");
 	}
 
 	[Test]
@@ -124,7 +92,7 @@ public class IncrementalPipelineCacheTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<DiagnosticTestGenerator>();
+		SourceGeneratorTestRunner<DiagnosticTestGenerator> runner = new();
 
 		var result = await runner.RunIncrementalAsync(
 			[
@@ -138,10 +106,8 @@ public class IncrementalPipelineCacheTests
 			cancellationToken
 		);
 
-		var second = StepReasons(result.Runs[1]);
-
-		await Assert.That(second["GetGenerationConfiguration"]).Contains(StepReason.Modified);
-		await Assert.That(second["GetGenerationContext_EmptyCapabilities"]).Contains(StepReason.Modified);
-		await Assert.That(second["ForAttribute_TestAttribute"].All(static r => r == StepReason.Cached)).IsTrue();
+		await Assert.That(result.Runs[1]).StepIsModified("GetGenerationConfiguration");
+		await Assert.That(result.Runs[1]).StepIsModified("GetGenerationContext_EmptyCapabilities");
+		await Assert.That(result.Runs[1]).StepIsCached("ForAttribute_TestAttribute");
 	}
 }

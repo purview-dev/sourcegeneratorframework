@@ -1,8 +1,12 @@
+#pragma warning disable CS1591
+using System.ComponentModel;
+
 namespace Purview.SourceGeneratorFramework.Testing;
 
 /// <summary>
 /// Fluent extension methods that preserve the concrete options type for downstream derived records.
 /// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public static class SourceGeneratorTestOptionsExtensions
 {
 	extension<TOptions>(TOptions options)

@@ -75,15 +75,18 @@ public static class IncrementalPipelineExtensions
 		/// <see cref="IIncrementalGenerator.Initialize"/> methods thin and enforces the rule that diagnostics are reported in the source output stage.
 		/// </summary>
 		/// <typeparam name="TOutput">The type of the generator result.</typeparam>
+		/// <param name="context">The generator initialization context.</param>
 		/// <param name="outputs">The incremental values provider for the generator results.</param>
 		/// <param name="contextProvider">The incremental value provider for the generation context.</param>
 		/// <param name="generate">The action to generate source files and report diagnostics.</param>
 		/// <param name="trackingName">An optional tracking name for the source output.</param>
 		public static void RegisterSourceOutput<TOutput>(
+			IncrementalGeneratorInitializationContext context,
 			IncrementalValuesProvider<GeneratorResult<TOutput>> outputs,
 			IncrementalValueProvider<GenerationContext<EmptyCapabilities>> contextProvider,
 			Action<SourceProductionContext, TOutput, GenerationContext<EmptyCapabilities>> generate,
 			string? trackingName = null
-		) => IncrementalPipeline.RegisterSourceOutput(outputs, contextProvider, generate, trackingName);
+		)
+			where TOutput : notnull => context.RegisterSourceOutput(outputs, contextProvider, generate, trackingName);
 	}
 }

@@ -108,4 +108,54 @@ public class EquatableArrayTests
 		await Assert.That(array.Count).IsEqualTo(0);
 		await Assert.That(array.IsEmpty).IsTrue();
 	}
+
+	[Test]
+	public async Task DefaultArray_IsEqualToEmpty()
+	{
+		EquatableArray<int> array = default;
+
+		await Assert.That(array.Equals(EquatableArray<int>.Empty)).IsTrue();
+		await Assert.That(array == EquatableArray<int>.Empty).IsTrue();
+	}
+
+	[Test]
+	public async Task DefaultArray_GetHashCode_MatchesEmpty()
+	{
+		EquatableArray<int> array = default;
+
+		await Assert.That(array.GetHashCode()).IsEqualTo(EquatableArray<int>.Empty.GetHashCode());
+	}
+
+	[Test]
+	public async Task DefaultArray_GetHashCode_DoesNotThrow()
+	{
+		EquatableArray<int> array = default;
+
+		await Assert.That(() => array.GetHashCode()).ThrowsNothing();
+	}
+
+	[Test]
+	public async Task RecordStructWithDefaultEquatableArrayField_GetHashCode_DoesNotThrow()
+	{
+		// Reproduces the failure where a user pipeline model holds a default EquatableArray field and the
+		// incremental driver hashes the containing record.
+		Model model = default;
+
+		await Assert.That(() => model.GetHashCode()).ThrowsNothing();
+	}
+
+	[Test]
+	public async Task NestedDefaultEquatableArray_DuringConstructionHash_DoesNotThrow()
+	{
+		// Reproduces the failure where constructing an EquatableArray hashes its elements and an element's
+		// hash chain reaches a default EquatableArray (e.g. via a default GeneratorResult).
+		Nested[] items = [new(default, "value")];
+		EquatableArray<Nested> array = new(ImmutableArray.Create(items));
+
+		await Assert.That(() => array.GetHashCode()).ThrowsNothing();
+	}
+
+	readonly record struct Model(EquatableArray<string> Values, string Name);
+
+	readonly record struct Nested(GeneratorResult<int> Result, string Name);
 }

@@ -6,6 +6,7 @@ A set of libraries for building and testing incremental C# source generators usi
 
 - [Source generator & analyser best practices](docs/guide.md)
 - [CodeWriter structured API reference](docs/code-writer.md)
+- [Step-cache tests for incremental generators](docs/step-cache-tests.md)
 
 ## Packages
 

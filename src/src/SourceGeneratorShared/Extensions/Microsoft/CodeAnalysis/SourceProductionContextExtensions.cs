@@ -1,3 +1,4 @@
+#pragma warning disable CS1591
 using System.ComponentModel;
 
 namespace Microsoft.CodeAnalysis;
@@ -8,9 +9,9 @@ public static class SourceProductionContextExtensions
 	extension(SourceProductionContext context)
 	{
 		/// <summary>
-		/// Reports a single <see cref="DiagnosticInfo"/> to the source production context.
+		/// Reports a single <see cref="ReportableDiagnostic"/> to the source production context.
 		/// </summary>
-		public void ReportDiagnostic(DiagnosticInfo diagnostic)
+		public void ReportDiagnostic(ReportableDiagnostic diagnostic)
 		{
 			if (diagnostic is null)
 				throw new ArgumentNullException(nameof(diagnostic));
@@ -19,9 +20,9 @@ public static class SourceProductionContextExtensions
 		}
 
 		/// <summary>
-		/// Reports a sequence of <see cref="DiagnosticInfo"/> diagnostics to the source production context.
+		/// Reports a sequence of <see cref="ReportableDiagnostic"/> diagnostics to the source production context.
 		/// </summary>
-		public void ReportDiagnostics(IEnumerable<DiagnosticInfo> diagnostics)
+		public void ReportDiagnostics(IEnumerable<ReportableDiagnostic> diagnostics)
 		{
 			if (diagnostics is null)
 				throw new ArgumentNullException(nameof(diagnostics));

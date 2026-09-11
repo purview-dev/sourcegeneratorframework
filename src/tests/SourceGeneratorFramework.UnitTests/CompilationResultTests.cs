@@ -28,8 +28,8 @@ public class CompilationResultTests
 	[Test]
 	public async Task CompileToAssembly_ExposesLoadedAssembly_ThatCanExecute(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<PassthroughGenerator>();
-		var options = new SourceGeneratorTestOptions { CompileToAssembly = true };
+		SourceGeneratorTestRunner<PassthroughGenerator> runner = new();
+		SourceGeneratorTestOptions options = new() { CompileToAssembly = true };
 
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
 
@@ -47,8 +47,8 @@ public class CompilationResultTests
 	[Test]
 	public async Task CompileToAssembly_LoadsIntoCollectibleContext(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<PassthroughGenerator>();
-		var options = new SourceGeneratorTestOptions { CompileToAssembly = true };
+		SourceGeneratorTestRunner<PassthroughGenerator> runner = new();
+		SourceGeneratorTestOptions options = new() { CompileToAssembly = true };
 
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
 
@@ -61,8 +61,8 @@ public class CompilationResultTests
 	[Test]
 	public async Task CompileToAssembly_Dispose_DoesNotThrow(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<PassthroughGenerator>();
-		var options = new SourceGeneratorTestOptions { CompileToAssembly = true };
+		SourceGeneratorTestRunner<PassthroughGenerator> runner = new();
+		SourceGeneratorTestOptions options = new() { CompileToAssembly = true };
 
 		using (var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken))
 		{
@@ -73,8 +73,8 @@ public class CompilationResultTests
 	[Test]
 	public async Task Metadata_ReflectsGeneratedType_WithoutExecution(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<PassthroughGenerator>();
-		var options = new SourceGeneratorTestOptions { CompileToAssembly = true };
+		SourceGeneratorTestRunner<PassthroughGenerator> runner = new();
+		SourceGeneratorTestOptions options = new() { CompileToAssembly = true };
 
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
 
@@ -90,7 +90,7 @@ public class CompilationResultTests
 	[Test]
 	public async Task AssemblyAndMetadata_AreNull_WhenNotCompiled(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<PassthroughGenerator>();
+		SourceGeneratorTestRunner<PassthroughGenerator> runner = new();
 
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 

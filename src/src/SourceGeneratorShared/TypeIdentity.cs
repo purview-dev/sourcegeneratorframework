@@ -1073,6 +1073,7 @@ public readonly record struct TypeIdentity
 		if (left.Kind == TypeReferenceKind.Named && !left.Identity.Equals(right.Identity))
 			return false;
 
+		// Nullable reference annotations are metadata rather than identity, so a provable reference annotation is
 		return TypeReferenceModifiersEqual(left.Modifiers, right.Modifiers);
 	}
 
@@ -1090,6 +1091,7 @@ public readonly record struct TypeIdentity
 		if (left.Kind == TypeReferenceKind.Named && !left.Identity.Similar(right.Identity))
 			return false;
 
+		// Nullable reference annotations are metadata rather than identity, so a provable reference annotation is
 		return TypeReferenceModifiersSimilar(left.Modifiers, right.Modifiers);
 	}
 

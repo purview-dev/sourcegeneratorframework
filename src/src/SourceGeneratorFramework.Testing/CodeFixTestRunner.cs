@@ -76,7 +76,7 @@ public sealed class CodeFixTestRunner<TAnalyzer, TCodeFix> : RoslynTestRunner
 		var actions = RegisterActions(document, firstDiagnostic, cancellationToken);
 		var action = SelectAction(actions, options);
 
-		var codeFixProvider = new TCodeFix();
+		TCodeFix codeFixProvider = new();
 		var fixAllAction =
 			await RunFixAllProviderAsync(document, codeFixProvider, action, sourceDiagnostics, cancellationToken)
 			?? throw new InvalidOperationException("The FixAllProvider did not produce a code action.");
@@ -111,7 +111,7 @@ public sealed class CodeFixTestRunner<TAnalyzer, TCodeFix> : RoslynTestRunner
 			codeFixProvider.GetFixAllProvider()
 			?? throw new InvalidOperationException("The code fix provider has no FixAllProvider.");
 
-		var fixAllContext = new FixAllContext(
+		FixAllContext fixAllContext = new(
 			document,
 			codeFixProvider,
 			FixAllScope.Project,
@@ -131,7 +131,7 @@ public sealed class CodeFixTestRunner<TAnalyzer, TCodeFix> : RoslynTestRunner
 	)
 	{
 		List<CodeAction> actions = [];
-		var context = new CodeFixContext(document, diagnostic, (action, _) => actions.Add(action), cancellationToken);
+		CodeFixContext context = new(document, diagnostic, (action, _) => actions.Add(action), cancellationToken);
 		new TCodeFix().RegisterCodeFixesAsync(context).GetAwaiter().GetResult();
 
 		return [.. actions];

@@ -1,10 +1,11 @@
+#pragma warning disable CS1591
 using System.ComponentModel;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace System;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public static class StringExtension
+public static class StringExtensions
 {
 	extension(string? value)
 	{

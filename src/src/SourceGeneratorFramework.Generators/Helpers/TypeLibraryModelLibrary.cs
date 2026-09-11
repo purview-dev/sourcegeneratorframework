@@ -12,32 +12,33 @@ static class TypeLibraryModelLibrary
 		IncrementalGeneratorInitializationContext context
 	)
 	{
+		// The framework PurviewTypeLibrary shape is fixed for a given compilation, so it is walked once per
+		// compilation and cached as a value-equatable model instead of being re-walked for every
+		// [GenerateTypeLibrary] spec in the compilation.
+		var frameworkTree = context
+			.CompilationProvider.Select(static (compilation, _) => BuildFrameworkTree(compilation))
+			.WithTrackingName("GetFrameworkTypeLibraryTree");
+
 		return IncrementalPipeline
 			.ForAttributeWithMetadataName(
 				context,
 				GeneratorTypeLibrary.Attirbutes.GenerateTypeLibraryAttribute,
-				(ctx, ct) =>
-				{
-					var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
-					return symbol is not INamedTypeSymbol classSymbol
-						? GeneratorResult<TypeLibraryModel>.Empty
-						: BuildTarget(classSymbol, ctx.SemanticModel.Compilation, ct);
-				},
-				predicate: (ctx, ct) => ctx is ClassDeclarationSyntax
+				static (ctx, _) => (INamedTypeSymbol)ctx.TargetSymbol,
+				predicate: static (ctx, _) => ctx is ClassDeclarationSyntax
 			)
+			.CombineWith(frameworkTree, static (specSymbol, tree, ct) => BuildTarget(specSymbol, tree, ct))
 			.WithTrackingName("GetTypeLibraryTargets");
 	}
 
 	static GeneratorResult<TypeLibraryModel> BuildTarget(
 		INamedTypeSymbol specSymbol,
-		Compilation compilation,
+		EquatableArray<TypeLibraryNamespaceNode> frameworkTree,
 		CancellationToken cancellationToken
 	)
 	{
-		// Validation diagnostics are reported by TypeLibraryValidationAnalyzer; the generator only
-		// tracks whether a blocking error exists so it can gate generation without emitting the
-		// diagnostics itself.
-		var hasBlockingError = false;
+		// Validation diagnostics are reported by TypeLibraryValidationAnalyzer; the generator carries them
+		// on the result so it can gate generation on ShouldProcess without emitting the diagnostics itself.
+		List<ReportableDiagnostic> diagnostics = [];
 		var generateAttribute = GetAttribute(specSymbol, GeneratorTypeLibrary.Attirbutes.GenerateTypeLibraryAttribute);
 		if (generateAttribute is null)
 			return GeneratorResult<TypeLibraryModel>.Empty;
@@ -46,12 +47,13 @@ static class TypeLibraryModelLibrary
 		var outputNamespace = GetNamedArgument(generateAttribute, "Namespace", (string?)null);
 		var specDocumentation = ExtractDocumentation(specSymbol);
 
-		var root = new List<NamespaceNodeBuilder>();
-		var nodeLookup = new Dictionary<string, NamespaceNodeBuilder>(StringComparer.Ordinal);
+		List<NamespaceNodeBuilder> root = [];
+		Dictionary<string, NamespaceNodeBuilder> nodeLookup = new(StringComparer.Ordinal);
 
 		// The generated type library inherits the full framework PurviewTypeLibrary shape, so every
-		// framework member is present before the user's [TypeRef] members are merged in.
-		BuildFrameworkTree(compilation, root, nodeLookup);
+		// framework member is present before the user's [TypeRef] members are merged in. The shape was
+		// already walked (once per compilation) by the GetFrameworkTypeLibraryTree stage.
+		AddFrameworkTree(frameworkTree, root, nodeLookup);
 
 		foreach (var field in specSymbol.GetMembers().OfType<IFieldSymbol>())
 		{
@@ -71,9 +73,29 @@ static class TypeLibraryModelLibrary
 			if (isTypeReference)
 			{
 				var initializer = ReadInitializerExpression(field, cancellationToken);
-				if (initializer is null || field.DeclaredAccessibility != Accessibility.Internal)
+				if (initializer is null)
 				{
-					hasBlockingError = true;
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.ReferenceMemberMissingInitializer,
+							isBlocking: true,
+							field,
+							field.Name
+						)
+					);
+					continue;
+				}
+
+				if (field.DeclaredAccessibility != Accessibility.Internal)
+				{
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.MemberAccessibilityInvalid,
+							isBlocking: true,
+							field,
+							field.Name
+						)
+					);
 					continue;
 				}
 
@@ -94,9 +116,29 @@ static class TypeLibraryModelLibrary
 			{
 				// An initialised TypeIdentity follows the same rules as a TypeReference value member.
 				var initializer = ReadInitializerExpression(field, cancellationToken);
-				if (initializer is null || field.DeclaredAccessibility != Accessibility.Internal)
+				if (initializer is null)
 				{
-					hasBlockingError = true;
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.ReferenceMemberMissingInitializer,
+							isBlocking: true,
+							field,
+							field.Name
+						)
+					);
+					continue;
+				}
+
+				if (field.DeclaredAccessibility != Accessibility.Internal)
+				{
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.MemberAccessibilityInvalid,
+							isBlocking: true,
+							field,
+							field.Name
+						)
+					);
 					continue;
 				}
 
@@ -118,12 +160,32 @@ static class TypeLibraryModelLibrary
 				// A plain TypeIdentity is a generation marker: private accessibility.
 				if (field.DeclaredAccessibility != Accessibility.Private)
 				{
-					hasBlockingError = true;
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.MemberAccessibilityInvalid,
+							isBlocking: true,
+							field,
+							field.Name
+						)
+					);
 					continue;
 				}
 
-				var (typeName, memberNamespace, genericArity) = ReadTypeRef(typeRef, field.Name, ref hasBlockingError);
-				if (hasBlockingError)
+				if (HasNoInitializer(field, cancellationToken))
+				{
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.MarkerMissingDefaultInitializer,
+							isBlocking: false,
+							field,
+							field.Name
+						)
+					);
+				}
+
+				var before = diagnostics.Count;
+				var (typeName, memberNamespace, genericArity) = ReadTypeRef(typeRef, field, diagnostics);
+				if (diagnostics.Count > before)
 					continue;
 
 				member = new(
@@ -140,15 +202,23 @@ static class TypeLibraryModelLibrary
 			}
 			else
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						TypeLibraryDiagnosticRules.MemberTypeInvalid,
+						isBlocking: true,
+						field,
+						field.Name,
+						field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+					)
+				);
 				continue;
 			}
 		}
 
-		if (hasBlockingError)
-			return GeneratorResult<TypeLibraryModel>.Empty;
+		if (diagnostics.Any(d => d.IsBlocking))
+			return GeneratorResult<TypeLibraryModel>.Create([.. diagnostics]);
 
-		var model = new TypeLibraryModel(
+		TypeLibraryModel model = new(
 			Specifier: specSymbol.ContainingNamespace.IsGlobalNamespace
 				? specSymbol.Name
 				: $"{specSymbol.ContainingNamespace.ToDisplayString()}.{specSymbol.Name}",
@@ -165,7 +235,10 @@ static class TypeLibraryModelLibrary
 			])
 		);
 
-		return GeneratorResult<TypeLibraryModel>.Create(model);
+		return GeneratorResult<TypeLibraryModel>.Create(
+			model,
+			System.Collections.Immutable.ImmutableArray.CreateRange(diagnostics)
+		);
 	}
 
 	/// <summary>
@@ -203,22 +276,26 @@ static class TypeLibraryModelLibrary
 	}
 
 	/// <summary>
-	/// Replicates the framework <c>PurviewTypeLibrary</c> nested namespace classes and their members into
-	/// the generated type library, emitting each member as an alias reference to the framework value so
-	/// arity and generic construction are preserved exactly.
+	/// Walks the framework <c>PurviewTypeLibrary</c> nested namespace classes and their members once,
+	/// producing a value-equatable model that is cached by the <c>GetFrameworkTypeLibraryTree</c> pipeline
+	/// stage. Each member is emitted as an alias reference to the framework value so arity and generic
+	/// construction are preserved exactly.
 	/// </summary>
-	static void BuildFrameworkTree(
-		Compilation compilation,
-		List<NamespaceNodeBuilder> root,
-		Dictionary<string, NamespaceNodeBuilder> lookup
-	)
+	static EquatableArray<TypeLibraryNamespaceNode> BuildFrameworkTree(Compilation compilation)
 	{
 		var frameworkType = compilation.GetTypeByMetadataName("Purview.SourceGeneratorFramework.PurviewTypeLibrary");
 		if (frameworkType is null)
-			return;
+			return EquatableArray<TypeLibraryNamespaceNode>.Empty;
+
+		List<NamespaceNodeBuilder> root = [];
+		Dictionary<string, NamespaceNodeBuilder> lookup = new(StringComparer.Ordinal);
 
 		foreach (var nestedType in frameworkType.GetTypeMembers())
 			AddFrameworkNode(root, lookup, nestedType);
+
+		return new EquatableArray<TypeLibraryNamespaceNode>([
+			.. root.OrderBy(static n => n.Name, StringComparer.Ordinal).Select(static n => n.ToModel()),
+		]);
 	}
 
 	static void AddFrameworkNode(
@@ -250,6 +327,34 @@ static class TypeLibraryModelLibrary
 
 		foreach (var child in nestedType.GetTypeMembers())
 			AddFrameworkNode(node.Children, lookup, child);
+	}
+
+	/// <summary>
+	/// Materializes the cached framework tree into mutable builder nodes so user <c>[TypeRef]</c> members can
+	/// be merged in without any further semantic queries.
+	/// </summary>
+	static void AddFrameworkTree(
+		EquatableArray<TypeLibraryNamespaceNode> frameworkTree,
+		List<NamespaceNodeBuilder> root,
+		Dictionary<string, NamespaceNodeBuilder> lookup
+	)
+	{
+		foreach (var node in frameworkTree)
+			AddFrameworkNode(root, lookup, node);
+	}
+
+	static void AddFrameworkNode(
+		List<NamespaceNodeBuilder> nodes,
+		Dictionary<string, NamespaceNodeBuilder> lookup,
+		TypeLibraryNamespaceNode node
+	)
+	{
+		var built = GetOrAddNode(nodes, lookup, node.NamespaceValue, node.Name);
+		foreach (var member in node.Members)
+			built.Members.Add(member);
+
+		foreach (var child in node.Children)
+			AddFrameworkNode(built.Children, lookup, child);
 	}
 
 	static void AddToTree(
@@ -284,7 +389,7 @@ static class TypeLibraryModelLibrary
 		if (lookup.TryGetValue(namespaceValue, out var existing))
 			return existing;
 
-		var node = new NamespaceNodeBuilder(segment, namespaceValue);
+		NamespaceNodeBuilder node = new(segment, namespaceValue);
 		lookup.Add(namespaceValue, node);
 		nodes.Add(node);
 		return node;
@@ -292,10 +397,11 @@ static class TypeLibraryModelLibrary
 
 	static (string TypeName, string Namespace, int Arity) ReadTypeRef(
 		AttributeData typeRef,
-		string fieldName,
-		ref bool hasBlockingError
+		IFieldSymbol field,
+		List<ReportableDiagnostic> diagnostics
 	)
 	{
+		var fieldName = field.Name;
 		var namedNamespace = GetNamedArgument(typeRef, "Namespace", (string?)null);
 		var namedArity = GetNamedArgument(typeRef, "Arity", -1);
 
@@ -311,14 +417,28 @@ static class TypeLibraryModelLibrary
 			var memberNamespace = namedNamespace ?? GetConstructorArgument(typeRef, 0, (string?)null);
 			if (string.IsNullOrWhiteSpace(memberNamespace))
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+						isBlocking: true,
+						field,
+						fieldName
+					)
+				);
 				return (memberName, string.Empty, 0);
 			}
 
 			var memberArity = namedArity != -1 ? namedArity : GetConstructorArgument(typeRef, 1, 0);
 			if (memberArity < 0)
 			{
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+						isBlocking: true,
+						field,
+						fieldName
+					)
+				);
 				return (memberName, memberNamespace!, 0);
 			}
 
@@ -327,7 +447,14 @@ static class TypeLibraryModelLibrary
 
 		if (typeRef.ConstructorArguments.Length == 0)
 		{
-			hasBlockingError = true;
+			diagnostics.Add(
+				ReportableDiagnostic.Create(
+					TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+					isBlocking: true,
+					field,
+					fieldName
+				)
+			);
 			return (string.Empty, string.Empty, 0);
 		}
 
@@ -343,7 +470,14 @@ static class TypeLibraryModelLibrary
 			{
 				if (typeSymbol.ContainingNamespace.IsGlobalNamespace)
 				{
-					hasBlockingError = true;
+					diagnostics.Add(
+						ReportableDiagnostic.Create(
+							TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+							isBlocking: true,
+							field,
+							fieldName
+						)
+					);
 					return (typeSymbol.Name, string.Empty, 0);
 				}
 
@@ -358,7 +492,14 @@ static class TypeLibraryModelLibrary
 				break;
 			}
 			default:
-				hasBlockingError = true;
+				diagnostics.Add(
+					ReportableDiagnostic.Create(
+						TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+						isBlocking: true,
+						field,
+						fieldName
+					)
+				);
 				return (string.Empty, string.Empty, 0);
 		}
 #pragma warning restore format
@@ -367,14 +508,28 @@ static class TypeLibraryModelLibrary
 			namedNamespace ?? GetConstructorArgument(typeRef, 1, (string?)null) ?? inferredNamespace;
 		if (string.IsNullOrWhiteSpace(resolvedNamespace))
 		{
-			hasBlockingError = true;
+			diagnostics.Add(
+				ReportableDiagnostic.Create(
+					TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+					isBlocking: true,
+					field,
+					fieldName
+				)
+			);
 			return (typeName, string.Empty, 0);
 		}
 
 		var explicitArity = namedArity != -1 ? namedArity : GetConstructorArgument(typeRef, 2, -1);
 		if (explicitArity is < 0 and not -1)
 		{
-			hasBlockingError = true;
+			diagnostics.Add(
+				ReportableDiagnostic.Create(
+					TypeLibraryDiagnosticRules.MemberTypeNotResolved,
+					isBlocking: true,
+					field,
+					fieldName
+				)
+			);
 			return (typeName, resolvedNamespace!, 0);
 		}
 
@@ -408,6 +563,21 @@ static class TypeLibraryModelLibrary
 		{
 			if (reference.GetSyntax(cancellationToken) is VariableDeclaratorSyntax declarator)
 				return !IsDefaultExpression(declarator.Initializer?.Value);
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Determines whether the field declares no initializer at all, rather than an explicit
+	/// <c>= default</c> marker.
+	/// </summary>
+	static bool HasNoInitializer(IFieldSymbol field, CancellationToken cancellationToken)
+	{
+		foreach (var reference in field.DeclaringSyntaxReferences)
+		{
+			if (reference.GetSyntax(cancellationToken) is VariableDeclaratorSyntax declarator)
+				return declarator.Initializer is null;
 		}
 
 		return false;
