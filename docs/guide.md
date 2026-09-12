@@ -2056,9 +2056,8 @@ Extension classes should form a coherent, discoverable shape so that "which type
 - **Name**: `{Receiver}Extensions` (plural suffix), one receiver type per class.
 - **Style**: prefer C# 14 `extension(Receiver receiver)` blocks over classic
   `public static T Method(this Receiver receiver, ...)` methods.
-- **Metadata**: `[EditorBrowsable(EditorBrowsableState.Never)]` on the class and a file-level
-  `#pragma warning disable CS1591`, so IntelliSense and documentation tooling treat them as framework
-  plumbing rather than public API.
+- **Metadata**: `[EditorBrowsable(EditorBrowsableState.Never)]` on the class, so IntelliSense and
+  documentation tooling treat them as framework plumbing rather than public API.
 
 The framework's analyzers enforce these rules:
 
@@ -2068,7 +2067,7 @@ The framework's analyzers enforce these rules:
 | `PSGFR35` | Class name matches the extended type (`{Receiver}Extensions`). |
 | `PSGFR36` | Class lives in the extended type's namespace. |
 | `PSGFR37` | One receiver type per class. |
-| `PSGFR38` | `[EditorBrowsable]` and CS1591 suppression are present. |
+| `PSGFR38` | `[EditorBrowsable(EditorBrowsableState.Never)]` is present. |
 
 The `ReorganizeExtensionClassCodeFixProvider` converts a class with many disparate extensions into the
 coherent shape: it renames (`PSGFR35`), splits multi-receiver classes into per-type files (`PSGFR37`),

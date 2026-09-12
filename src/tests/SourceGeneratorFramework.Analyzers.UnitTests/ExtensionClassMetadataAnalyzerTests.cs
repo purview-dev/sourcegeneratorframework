@@ -24,12 +24,31 @@ public sealed class ExtensionClassMetadataAnalyzerTests
 	}
 
 	[Test]
-	public async Task ExtensionClassWithEditorBrowsableOnly_ReportsDiagnostic(CancellationToken cancellationToken)
+	public async Task ExtensionClassWithEditorBrowsableOnly_DoesNotReportDiagnostic(CancellationToken cancellationToken)
 	{
 		const string source = """
 			using System.ComponentModel;
 
 			[EditorBrowsable(EditorBrowsableState.Never)]
+			public static class StringExtensions
+			{
+				extension(string value)
+				{
+					public bool IsBlank() => string.IsNullOrWhiteSpace(value);
+				}
+			}
+			""";
+
+		var result = await AnalyzeAsync(source, cancellationToken);
+
+		await Assert.That(result).HasNoDiagnostics();
+	}
+
+	[Test]
+	public async Task ExtensionClassWithPragmaOnly_ReportsDiagnostic(CancellationToken cancellationToken)
+	{
+		const string source = """
+			#pragma warning disable CS1591
 			public static class StringExtensions
 			{
 				extension(string value)
@@ -48,7 +67,6 @@ public sealed class ExtensionClassMetadataAnalyzerTests
 	public async Task ExtensionClassWithFullMetadata_DoesNotReportDiagnostic(CancellationToken cancellationToken)
 	{
 		const string source = """
-			#pragma warning disable CS1591
 			using System.ComponentModel;
 
 			[EditorBrowsable(EditorBrowsableState.Never)]
