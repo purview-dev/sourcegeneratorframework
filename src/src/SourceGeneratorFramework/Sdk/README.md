@@ -974,7 +974,7 @@ The `Purview.SourceGeneratorFramework` package includes the `Purview.SourceGener
 | `PSGFR35` | Extension class name must match the extended type (`{Receiver}Extensions`). |
 | `PSGFR36` | Extension classes must be placed in the extended type's namespace under an `Extensions` folder. |
 | `PSGFR37` | One extension class per receiver type; split classes that extend multiple types. |
-| `PSGFR38` | Extension classes should carry `[EditorBrowsable(EditorBrowsableState.Never)]` and a file-level `#pragma warning disable CS1591`. |
+| `PSGFR38` | Extension classes should carry `[EditorBrowsable(EditorBrowsableState.Never)]`. |
 
 ## License
 

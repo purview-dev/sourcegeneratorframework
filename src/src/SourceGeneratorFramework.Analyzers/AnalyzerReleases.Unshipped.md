@@ -13,4 +13,4 @@ PSGFR34 | Purview.SourceGeneratorFramework | Info | Prefer extension blocks over
 PSGFR35 | Purview.SourceGeneratorFramework | Warning | Extension class name does not match the extended type
 PSGFR36 | Purview.SourceGeneratorFramework | Warning | Extension class is not placed in the extended type's namespace/folder
 PSGFR37 | Purview.SourceGeneratorFramework | Warning | Extension class extends multiple receiver types
-PSGFR38 | Purview.SourceGeneratorFramework | Warning | Extension class is missing EditorBrowsable or CS1591 suppression
+PSGFR38 | Purview.SourceGeneratorFramework | Warning | Extension class is missing EditorBrowsable

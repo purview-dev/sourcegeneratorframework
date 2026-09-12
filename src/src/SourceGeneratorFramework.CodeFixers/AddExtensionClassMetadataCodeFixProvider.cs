@@ -9,8 +9,7 @@ namespace Purview.SourceGeneratorFramework.CodeFixers;
 
 /// <summary>
 /// Adds the missing extension-class metadata: <c>[EditorBrowsable(EditorBrowsableState.Never)]</c> on the
-/// class, the <c>System.ComponentModel</c> using when required, and a file-level
-/// <c>#pragma warning disable CS1591</c> suppression.
+/// class and the <c>System.ComponentModel</c> using when required.
 /// </summary>
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(AddExtensionClassMetadataCodeFixProvider))]
 public sealed class AddExtensionClassMetadataCodeFixProvider : CodeFixProvider
@@ -57,14 +56,6 @@ public sealed class AddExtensionClassMetadataCodeFixProvider : CodeFixProvider
 		var hasComponentModelUsing = compilationUnit.Usings.Any(static usingDirective =>
 			usingDirective.Name?.ToString() == "System.ComponentModel"
 		);
-		var hasCs1591Pragma = compilationUnit
-			.DescendantTrivia(descendIntoTrivia: true)
-			.Select(static trivia => trivia.GetStructure())
-			.OfType<PragmaWarningDirectiveTriviaSyntax>()
-			.Any(static pragma =>
-				pragma.DisableOrRestoreKeyword.IsKind(SyntaxKind.DisableKeyword)
-				&& pragma.ErrorCodes.Any(static code => code.ToString().Contains("CS1591", StringComparison.Ordinal))
-			);
 
 		var updatedClass = typeDeclaration;
 		if (!hasEditorBrowsable)
@@ -90,25 +81,6 @@ public sealed class AddExtensionClassMetadataCodeFixProvider : CodeFixProvider
 		{
 			updatedUnit = updatedUnit.AddUsings(
 				SyntaxFactory.UsingDirective(SyntaxFactory.ParseName("System.ComponentModel")).NormalizeWhitespace()
-			);
-		}
-
-		if (!hasCs1591Pragma)
-		{
-			var pragmaTrivia = SyntaxFactory.Trivia(
-				SyntaxFactory.PragmaWarningDirectiveTrivia(
-					SyntaxFactory.Token(SyntaxKind.HashToken),
-					SyntaxFactory.Token(SyntaxKind.PragmaKeyword),
-					SyntaxFactory.Token(SyntaxKind.WarningKeyword),
-					SyntaxFactory.Token(SyntaxKind.DisableKeyword),
-					SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(SyntaxFactory.IdentifierName("CS1591")),
-					SyntaxFactory.Token(SyntaxKind.EndOfDirectiveToken),
-					isActive: true
-				)
-			);
-
-			updatedUnit = updatedUnit.WithLeadingTrivia(
-				updatedUnit.GetLeadingTrivia().Insert(0, pragmaTrivia).Insert(1, SyntaxFactory.CarriageReturnLineFeed)
 			);
 		}
 
