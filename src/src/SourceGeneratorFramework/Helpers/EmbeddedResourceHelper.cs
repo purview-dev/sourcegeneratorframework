@@ -15,7 +15,7 @@ public static class EmbeddedResourceHelper
 		assembly ??= Assembly.GetCallingAssembly();
 
 		using var stream = LoadStream(resourceName, assembly);
-		using var reader = new StreamReader(stream);
+		using StreamReader reader = new(stream);
 		return reader.ReadToEnd();
 	}
 

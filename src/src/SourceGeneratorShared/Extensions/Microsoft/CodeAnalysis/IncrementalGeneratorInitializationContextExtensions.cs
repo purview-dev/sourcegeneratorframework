@@ -1,9 +1,9 @@
+#pragma warning disable CS1591
 using System.ComponentModel;
 using System.Text;
-using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
-namespace Purview.SourceGeneratorFramework.Helpers;
+namespace Microsoft.CodeAnalysis;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
 public static class IncrementalGeneratorInitializationContextExtensions
@@ -92,7 +92,7 @@ public static class IncrementalGeneratorInitializationContextExtensions
 					if (item.Output.HasDiagnostics)
 						spc.ReportDiagnostics(item.Output.Diagnostics);
 
-					if (!item.Output.HasValue || item.Output.ShouldProcess)
+					if (!item.Output.ShouldProcess)
 						return;
 
 					generate(spc, item.Output.Value, item.Context);

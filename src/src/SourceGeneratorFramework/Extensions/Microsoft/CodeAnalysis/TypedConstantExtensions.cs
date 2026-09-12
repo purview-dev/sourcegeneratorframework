@@ -1,12 +1,17 @@
+// IDE0005 cannot see references inside extension(...) blocks, so it incorrectly reports these usings as
+// unnecessary; they are required for TypeIdentity and TypeHelpers used in the block bodies.
+#pragma warning disable IDE0005
+#pragma warning disable CS1591
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Globalization;
-using Microsoft.CodeAnalysis;
+using Purview.SourceGeneratorFramework;
+using Purview.SourceGeneratorFramework.Helpers;
 
-namespace Purview.SourceGeneratorFramework;
+namespace Microsoft.CodeAnalysis;
 
 [EditorBrowsable(EditorBrowsableState.Never)]
-public static partial class TypedConstantsExtensions
+public static partial class TypedConstantExtensions
 {
 	extension(TypedConstant constant)
 	{

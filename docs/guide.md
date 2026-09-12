@@ -34,7 +34,8 @@ tags:
 - [16. Multi-Version Roslyn Packaging](#16-multi-version-roslyn-packaging)
 - [17. `Microsoft.CodeAnalysis.Analysers`](#17-microsoftcodeanalysisanalysers)
 - [18. Recommended Project Configuration](#18-recommended-project-configuration)
-- [19. Review Checklist](#19-review-checklist)
+- [19. Extension Class Conventions](#19-extension-class-conventions)
+- [20. Review Checklist](#20-review-checklist)
 
 ---
 
@@ -1033,6 +1034,34 @@ Do not turn the generator pipeline into an analyser pipeline by default.
 
 ---
 
+## Blocking vs Non-Blocking Generator Diagnostics
+
+`GeneratorResult<T>.ShouldProcess` decides whether the output stage runs for a target. It is `true`
+when the result carries a value and none of its carried `ReportableDiagnostic` diagnostics are blocking.
+
+Whether a diagnostic blocks is an explicit, per-diagnostic decision (`ReportableDiagnostic.IsBlocking`),
+independent of its severity. An `Error`-severity diagnostic can still allow generation to continue when
+the generated code helps the developer fix the problem — for example, emitting an abstract base class
+alongside an error for a missing override, so the user can see what to implement:
+
+```csharp
+var diagnostic = ReportableDiagnostic.Create(
+    MissingOverride,
+    isBlocking: false,          // report the error, but keep generating
+    symbol,
+    symbol.Name,
+    "Execute"
+);
+
+return GeneratorResult<BaseModel>.Create(model, diagnostic);
+```
+
+A blocking diagnostic (`isBlocking: true`) stops generation for that target while still being reported.
+Prefer blocking diagnostics for genuine contract violations that would produce misleading output; prefer
+non-blocking diagnostics when the partial output is still useful.
+
+---
+
 ## Location Handling
 
 Analysers should report diagnostics on the most useful user-authored `Location`.
@@ -1241,6 +1270,32 @@ The exact reason expected depends on the stage and test scenario.
 The important point is that tests should prove:
 
 > An unrelated edit does not rerun expensive downstream generation.
+
+### Framework support
+
+The framework's testing packages make step-cache tests first-class. `SourceGeneratorTestRunner.RunIncrementalAsync`
+runs one shared driver over a sequence of source sets with step tracking enabled, and every pipeline helper
+assigns a tracking name so tests can reference individual stages.
+
+```csharp
+var result = await new SourceGeneratorTestRunner<ServiceRegistrationGenerator>().RunIncrementalAsync(
+	[
+		new IncrementalRunInput([firstSources]),
+		new IncrementalRunInput([changedSources]),
+	],
+	options,
+	cancellationToken
+);
+
+await Assert.That(result.Runs[0]).AllStepsNew();
+await Assert.That(result.Runs[1]).StepIsCached("ForAttribute_GenerateServiceAttribute");
+await Assert.That(result.Runs[1]).StepIsModified("GetGenerationConfiguration");
+```
+
+Assertions on `IncrementalCacheRun` (`AllStepsNew`, `AllStepsCachedOrUnchanged`, `StepIsCached`,
+`StepIsModified`, `HasStepReason`) plus `GetStepReasons()` cover the golden matrix. See
+[docs/step-cache-tests.md](step-cache-tests.md) for the full walkthrough and the canonical
+`StepCacheTests.cs` sample in the ExampleGenerator unit tests.
 
 ---
 
@@ -1989,7 +2044,40 @@ restart Visual Studio or reload the project for the fixes to appear.
 
 ---
 
-# 19. Review Checklist
+# 19. Extension Class Conventions
+
+Extension classes should form a coherent, discoverable shape so that "which type does this extend?" and
+"where does it live?" are answerable from the file path alone.
+
+- **Placement**: under an `Extensions` folder whose path mirrors the extended type's namespace, e.g.
+  `Extensions/Microsoft/CodeAnalysis/...`, `Extensions/System/...`.
+- **Namespace**: the extended type's namespace, so the folder, namespace, and receiver all align
+  (`IDE0130` enforces the folder↔namespace pairing).
+- **Name**: `{Receiver}Extensions` (plural suffix), one receiver type per class.
+- **Style**: prefer C# 14 `extension(Receiver receiver)` blocks over classic
+  `public static T Method(this Receiver receiver, ...)` methods.
+- **Metadata**: `[EditorBrowsable(EditorBrowsableState.Never)]` on the class and a file-level
+  `#pragma warning disable CS1591`, so IntelliSense and documentation tooling treat them as framework
+  plumbing rather than public API.
+
+The framework's analyzers enforce these rules:
+
+| Rule | What it enforces |
+|------|------------------|
+| `PSGFR34` | Prefer `extension(...)` blocks over classic `this`-parameter methods (gated on the language version supporting extension blocks). |
+| `PSGFR35` | Class name matches the extended type (`{Receiver}Extensions`). |
+| `PSGFR36` | Class lives in the extended type's namespace. |
+| `PSGFR37` | One receiver type per class. |
+| `PSGFR38` | `[EditorBrowsable]` and CS1591 suppression are present. |
+
+The `ReorganizeExtensionClassCodeFixProvider` converts a class with many disparate extensions into the
+coherent shape: it renames (`PSGFR35`), splits multi-receiver classes into per-type files (`PSGFR37`),
+moves the class under `Extensions/{ReceiverNamespace}/` and updates referencing files (`PSGFR36`), and the
+`ConvertToExtensionBlockCodeFixProvider` converts classic methods to `extension` blocks (`PSGFR34`).
+
+---
+
+# 20. Review Checklist
 
 ## Analyser
 

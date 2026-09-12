@@ -23,11 +23,7 @@ partial class CodeWriter
 		Func<MethodDeclarationOptions, MethodDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new MethodDeclarationOptions(
-			name,
-			returnType ?? PurviewTypeLibrary.System.Void,
-			accessibility
-		);
+		MethodDeclarationOptions declaration = new(name, returnType ?? PurviewTypeLibrary.System.Void, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -56,7 +52,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new MethodDeclarationOptions(name, returnType, accessibility);
+		MethodDeclarationOptions declaration = new(name, returnType, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -79,11 +75,7 @@ partial class CodeWriter
 		Func<MethodDeclarationOptions, MethodDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new MethodDeclarationOptions(
-			name,
-			returnType ?? PurviewTypeLibrary.System.Void,
-			accessibility
-		);
+		MethodDeclarationOptions declaration = new(name, returnType ?? PurviewTypeLibrary.System.Void, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -116,11 +108,7 @@ partial class CodeWriter
 			);
 		}
 
-		var declaration = new MethodDeclarationOptions(
-			name,
-			returnType ?? PurviewTypeLibrary.System.Void,
-			accessibility
-		)
+		MethodDeclarationOptions declaration = new(name, returnType ?? PurviewTypeLibrary.System.Void, accessibility)
 		{
 			ExpressionBody = expressionBody,
 		};
@@ -152,11 +140,7 @@ partial class CodeWriter
 		if (writeExpression is null)
 			throw new ArgumentNullException(nameof(writeExpression));
 
-		var declaration = new MethodDeclarationOptions(
-			name,
-			returnType ?? PurviewTypeLibrary.System.Void,
-			accessibility
-		);
+		MethodDeclarationOptions declaration = new(name, returnType ?? PurviewTypeLibrary.System.Void, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -191,7 +175,7 @@ partial class CodeWriter
 		if (returnType is null)
 			throw new ArgumentNullException(nameof(returnType));
 
-		var declaration = new OperatorDeclarationOptions(operatorToken, returnType, left, right, accessibility);
+		OperatorDeclarationOptions declaration = new(operatorToken, returnType, left, right, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -226,7 +210,7 @@ partial class CodeWriter
 		if (returnType is null)
 			throw new ArgumentNullException(nameof(returnType));
 
-		var declaration = new OperatorDeclarationOptions(operatorToken, returnType, left, right, accessibility);
+		OperatorDeclarationOptions declaration = new(operatorToken, returnType, left, right, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -253,7 +237,7 @@ partial class CodeWriter
 		Func<PropertyDeclarationOptions, PropertyDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new PropertyDeclarationOptions(name, type, accessibility);
+		PropertyDeclarationOptions declaration = new(name, type, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -281,7 +265,7 @@ partial class CodeWriter
 		Func<PropertyDeclarationOptions, PropertyDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new PropertyDeclarationOptions(name, type, accessibility);
+		PropertyDeclarationOptions declaration = new(name, type, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -310,7 +294,7 @@ partial class CodeWriter
 		if (writeExpression is null)
 			throw new ArgumentNullException(nameof(writeExpression));
 
-		var declaration = new PropertyDeclarationOptions(name, type, accessibility);
+		PropertyDeclarationOptions declaration = new(name, type, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -341,7 +325,7 @@ partial class CodeWriter
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		var declaration = new IndexerDeclarationOptions(type, parameters is null ? [] : [.. parameters]);
+		IndexerDeclarationOptions declaration = new(type, parameters is null ? [] : [.. parameters]);
 		if (accessibility is not null)
 			declaration = declaration with { Accessibility = accessibility };
 		if (configure is not null)
@@ -374,7 +358,7 @@ partial class CodeWriter
 		if (type is null)
 			throw new ArgumentNullException(nameof(type));
 
-		var declaration = new IndexerDeclarationOptions(type, parameters is null ? [] : [.. parameters]);
+		IndexerDeclarationOptions declaration = new(type, parameters is null ? [] : [.. parameters]);
 		if (accessibility is not null)
 			declaration = declaration with { Accessibility = accessibility };
 		if (configure is not null)
@@ -403,7 +387,7 @@ partial class CodeWriter
 		Func<FieldDeclarationOptions, FieldDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new FieldDeclarationOptions(name, type, accessibility);
+		FieldDeclarationOptions declaration = new(name, type, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -429,7 +413,7 @@ partial class CodeWriter
 		Func<ConstructorDeclarationOptions, ConstructorDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new ConstructorDeclarationOptions(name, accessibility);
+		ConstructorDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -456,7 +440,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new ConstructorDeclarationOptions(name, accessibility);
+		ConstructorDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -481,7 +465,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -503,7 +487,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -530,7 +514,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -551,7 +535,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -573,7 +557,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -600,7 +584,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -622,7 +606,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -644,7 +628,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -671,7 +655,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -693,7 +677,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -715,7 +699,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -742,7 +726,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -764,7 +748,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -786,7 +770,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -813,7 +797,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -834,7 +818,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -861,7 +845,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -885,7 +869,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -913,7 +897,7 @@ partial class CodeWriter
 		Func<TypeDeclarationOptions, TypeDeclarationOptions>? configure = null
 	)
 	{
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -942,7 +926,7 @@ partial class CodeWriter
 		if (writeBody is null)
 			throw new ArgumentNullException(nameof(writeBody));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -975,7 +959,7 @@ partial class CodeWriter
 		if (bodyWriter is null)
 			throw new ArgumentNullException(nameof(bodyWriter));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility);
+		TypeDeclarationOptions declaration = new(name, accessibility);
 		if (configure is not null)
 			declaration = configure(declaration);
 
@@ -1003,7 +987,7 @@ partial class CodeWriter
 		if (delegateReturnType is null)
 			throw new ArgumentNullException(nameof(delegateReturnType));
 
-		var declaration = new TypeDeclarationOptions(name, accessibility)
+		TypeDeclarationOptions declaration = new(name, accessibility)
 		{
 			DelegateReturnType = delegateReturnType,
 			DelegateParameters = parameters is null ? [] : [.. parameters],

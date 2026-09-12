@@ -35,7 +35,7 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 		var model = generationContext
 			.CollectWith(
 				targets,
-				(ctx, targetsArray, _) =>
+				static (ctx, targetsArray, _) =>
 					new ServiceRegistrationGenerationModel(ctx, new EquatableArray<ServiceTarget>(targetsArray))
 			)
 			.CombineWith(emitServiceInfo, (m, emit, _) => m with { EmitServiceInfo = emit });
@@ -45,7 +45,10 @@ public partial class ServiceRegistrationGenerator : IIncrementalGenerator
 
 	static ServiceTarget CreateServiceTarget(GeneratorAttributeSyntaxContext ctx, CancellationToken ct)
 	{
-		var symbol = ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct);
+		// ForAttributeWithMetadataName already resolves TargetSymbol; calling
+		// SemanticModel.GetDeclaredSymbol again would re-run the same symbol resolution on every
+		// pipeline rerun, so the pre-resolved symbol is used directly.
+		var symbol = ctx.TargetSymbol;
 		if (symbol is null)
 			return ServiceTarget.Empty;
 

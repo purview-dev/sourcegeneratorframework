@@ -8,7 +8,7 @@ public class SourceProductionContextExtensionsTests
 	[Test]
 	public async Task ReportDiagnostic_ReportsThroughGenerator()
 	{
-		var generator = new DiagnosticGenerator();
+		DiagnosticGenerator generator = new();
 		var compilation = CSharpCompilation.Create(
 			"TestAssembly",
 			[CSharpSyntaxTree.ParseText("class C { }")],
@@ -31,7 +31,7 @@ public class SourceProductionContextExtensionsTests
 				context.CompilationProvider,
 				static (spc, _) =>
 				{
-					var descriptor = new DiagnosticDescriptor(
+					DiagnosticDescriptor descriptor = new(
 						"TEST001",
 						"Test",
 						"Test message",
@@ -39,7 +39,7 @@ public class SourceProductionContextExtensionsTests
 						DiagnosticSeverity.Warning,
 						true
 					);
-					spc.ReportDiagnostic(DiagnosticInfo.Create(descriptor));
+					spc.ReportDiagnostic(ReportableDiagnostic.Create(descriptor, isBlocking: false));
 				}
 			);
 		}

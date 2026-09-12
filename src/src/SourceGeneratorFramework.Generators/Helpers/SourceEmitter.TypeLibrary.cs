@@ -186,7 +186,7 @@ partial class SourceEmitter
 				?? $"Represents the {model.ClassName} type library, containing type identity/ reference information."
 		);
 
-		var options = new TypeDeclarationOptions(model.ClassName, TypeDeclarationAccessibility.Public)
+		TypeDeclarationOptions options = new(model.ClassName, TypeDeclarationAccessibility.Public)
 		{
 			IsStatic = true,
 			IsPartial = true,
@@ -206,7 +206,7 @@ partial class SourceEmitter
 
 	static void NamespaceNode(CodeWriter writer, TypeLibraryNamespaceNode node)
 	{
-		var options = new TypeDeclarationOptions(node.Name, TypeDeclarationAccessibility.Public)
+		TypeDeclarationOptions options = new(node.Name, TypeDeclarationAccessibility.Public)
 		{
 			IsStatic = true,
 			IsPartial = true,

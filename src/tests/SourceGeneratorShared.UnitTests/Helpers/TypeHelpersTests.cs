@@ -114,7 +114,7 @@ public class TypeHelpersTests
 		const string source =
 			"namespace Testing { interface IResource { } class DefaultAspireResource : IResource { } class ResourceKitBase<T> where T : IResource { } class HostKit : ResourceKitBase<DefaultAspireResource> { } }";
 		var (Symbol, Syntax) = GetTypeDescriptor(source, "HostKit", cancellationToken);
-		var expectedBase = new TypeIdentity("ResourceKitBase", "Testing");
+		TypeIdentity expectedBase = new("ResourceKitBase", "Testing");
 
 		// Act
 		var symbolResult = TypeHelpers.IsDerivedFromExpectedBase(Symbol, expectedBase);
@@ -518,9 +518,9 @@ public class TypeHelpersTests
 	[Arguments("System.Collections.Generic.IReadOnlyDictionary<int, string>")]
 	public async Task Is_GivenTypeIsAMatch_ReturnsTrue(string typeName, CancellationToken cancellationToken)
 	{
-		var dictionaryKV = new TypeIdentity(typeof(Dictionary<,>));
-		var iDictionaryKV = new TypeIdentity(typeof(IDictionary<,>));
-		var iReadOnlyDictionaryKV = new TypeIdentity(typeof(IReadOnlyDictionary<,>));
+		TypeIdentity dictionaryKV = new(typeof(Dictionary<,>));
+		TypeIdentity iDictionaryKV = new(typeof(IDictionary<,>));
+		TypeIdentity iReadOnlyDictionaryKV = new(typeof(IReadOnlyDictionary<,>));
 
 		var symbol = GetTypeReferenceSymbol(typeName, cancellationToken);
 

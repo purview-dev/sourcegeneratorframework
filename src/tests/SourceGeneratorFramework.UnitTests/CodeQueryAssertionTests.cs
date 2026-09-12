@@ -48,7 +48,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedMethod_ReturnsTheMethodNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var method = await Assert.That(result).HasGeneratedMethod("DoWork");
@@ -60,7 +60,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedMethod_WithParameterTypes_ReturnsMatchingMethod(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		TypeReference[] parameters =
@@ -77,7 +77,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedClass_ReturnsTheClassNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var @class = await Assert.That(result).HasGeneratedClass("Simple");
@@ -91,7 +91,7 @@ public class CodeQueryAssertionTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var @class = await Assert
@@ -105,7 +105,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedClass_WithTypeIdentityValue_ImplicitlyConverts(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var @class = await Assert.That(result).HasGeneratedClass(new TypeIdentity("Simple", "Generated"));
@@ -116,7 +116,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedClass_WithWrongNamespace_Fails(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		await Assert
@@ -129,7 +129,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedField_ReturnsTheFieldNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var field = await Assert.That(result).HasGeneratedField("Name");
@@ -140,7 +140,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedMethod_FromCodeQuery_ReturnsTheMethodNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var method = await Assert.That(result.Generated()).HasGeneratedMethod("DoWork");
@@ -154,7 +154,7 @@ public class CodeQueryAssertionTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		TypeReference[] parameters =
@@ -173,7 +173,7 @@ public class CodeQueryAssertionTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var method = await Assert
@@ -186,7 +186,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedClass_FromCodeQuery_ReturnsTheClassNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var @class = await Assert.That(result.Generated()).HasGeneratedClass("Simple");
@@ -198,7 +198,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedProperty_FromCodeQuery_ReturnsThePropertyNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var property = await Assert.That(result.Generated()).HasGeneratedProperty("Count");
@@ -209,7 +209,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedField_FromCodeQuery_ReturnsTheFieldNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var field = await Assert.That(result.Generated()).HasGeneratedField("Name");
@@ -220,7 +220,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedSyntaxTree_FromCodeQuery_ReturnsTheTree(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var tree = await Assert.That(result.Generated()).HasGeneratedSyntaxTree("Simple.g.cs");
@@ -231,7 +231,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasGeneratedClass_FromCodeQuery_WithWrongNamespace_Fails(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		await Assert
@@ -246,7 +246,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasPropertyOfType_FromScopedResult_ReturnsThePropertyNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		var query = result.Generated();
 
@@ -261,7 +261,7 @@ public class CodeQueryAssertionTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		var query = result.Generated();
 
@@ -276,7 +276,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasPropertyOfType_FromScopedResult_WithWrongType_Fails(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var @class = await Assert.That(result.Generated()).HasGeneratedClass("Simple");
@@ -289,7 +289,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasFieldOfType_FromScopedResult_ReturnsTheFieldNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		var query = result.Generated();
 
@@ -302,7 +302,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasMethodOfType_FromScopedResult_ReturnsTheMethodNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		var query = result.Generated();
 
@@ -326,7 +326,7 @@ public class CodeQueryAssertionTests
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		var query = result.Generated();
 
@@ -339,7 +339,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task HasAttributeOfType_FromScopedResult_ReturnsTheAttributeNode(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		var query = result.Generated();
 
@@ -352,7 +352,7 @@ public class CodeQueryAssertionTests
 	[Test]
 	public async Task CodeQuery_MakeNullable_ResolvesNullableAnnotation(CancellationToken cancellationToken)
 	{
-		var runner = new SourceGeneratorTestRunner<SimpleGenerator>();
+		SourceGeneratorTestRunner<SimpleGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 
 		var nullable = result.Generated().MakeNullable(TypeReference.Create<string>());

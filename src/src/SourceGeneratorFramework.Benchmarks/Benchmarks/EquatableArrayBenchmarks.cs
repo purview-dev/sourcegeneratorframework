@@ -30,6 +30,9 @@ public class EquatableArrayBenchmarks
 	public bool EquatableArrayEquals() => _equatableArray1.Equals(_equatableArray2);
 
 	[Benchmark]
+	public int EquatableArrayGetHashCode() => _equatableArray1.GetHashCode();
+
+	[Benchmark]
 	public bool ImmutableArrayReferenceEquals() => _immutableArray1.Equals(_immutableArray2);
 
 	[Benchmark]

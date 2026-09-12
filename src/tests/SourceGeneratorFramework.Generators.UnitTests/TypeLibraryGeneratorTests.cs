@@ -546,6 +546,38 @@ public class TypeLibraryGeneratorTests : TUnitSourceGeneratorTestBase<TypeLibrar
 		await Assert.That(typeRefs).Contains("[Activity]");
 	}
 
+	[Test]
+	public async Task Generate_MarkerWithoutDefaultInitializer_StillGenerates(CancellationToken cancellationToken)
+	{
+		var source = """
+			using Purview.SourceGeneratorFramework;
+			using Purview.SourceGeneratorFramework.Generators;
+
+			namespace Test;
+
+			[GenerateTypeLibrary(ClassName = "SampleTypeLibrary", Namespace = "Test")]
+			static partial class TypeLibraryModel
+			{
+				[TypeRef("Purview.Telemetry")]
+				static readonly TypeIdentity ActivitySourceGenerationAttribute;
+			}
+			""";
+
+		var result = await GenerateAsync(source, cancellationToken: cancellationToken);
+
+		// TLB0010 is non-blocking and reported by the analyzer; the generator still emits the library.
+		await Assert.That(result.DriverResult.Diagnostics).DoesNotContain(d => d.Id == "TLB0010");
+
+		var generated = await GetGeneratedStringAsync(result, "Test.TypeLibraryModel.g.cs", cancellationToken);
+
+		await Assert.That(generated).IsNotNull();
+		await Assert
+			.That(generated)
+			.Contains(
+				"public static readonly global::Purview.SourceGeneratorFramework.TypeIdentity ActivitySourceGenerationAttribute = new(\"ActivitySourceGenerationAttribute\", \"Purview.Telemetry\");"
+			);
+	}
+
 	static async Task<string?> GetGeneratedStringAsync(
 		DriverRunResult result,
 		string fileName,

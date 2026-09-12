@@ -12,7 +12,7 @@ namespace Purview.SourceGeneratorFramework.Analyzers;
 /// interpolated, and raw string literals as well as constant expressions are inspected.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class PreferStructuredCodeWriterApiAnalyzer : DiagnosticAnalyzer
+public sealed class PreferStructuredCodeWriterAPIAnalyzer : DiagnosticAnalyzer
 {
 	public const string DiagnosticId = "PSGFR18";
 

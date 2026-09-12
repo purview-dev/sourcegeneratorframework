@@ -20,7 +20,7 @@ public readonly record struct GeneratorResult<T>
 	/// <summary>
 	/// Gets the diagnostics associated with the generator result. If the result is successful, this may be empty or contain warnings.
 	/// </summary>
-	public EquatableArray<DiagnosticInfo> Diagnostics { get; private init; }
+	public EquatableArray<ReportableDiagnostic> Diagnostics { get; private init; }
 
 	/// <summary>
 	/// Indicates whether the generator result is successful (has a value) and does not contain any fatal diagnostics.
@@ -33,9 +33,10 @@ public readonly record struct GeneratorResult<T>
 	public bool HasDiagnostics { get; private init; }
 
 	/// <summary>
-	/// Indicates whether the generator result should be processed, meaning it has a value and does not contain any error severity diagnostics.
+	/// Indicates whether the generator result should be processed, meaning it has a value and does not contain
+	/// any blocking diagnostics (see <see cref="ReportableDiagnostic.IsBlocking"/>).
 	/// </summary>
-	public bool ShouldProcess { get; private init; }
+	public bool ShouldProcess => HasValue && !HasBlockingDiagnostics;
 
 	/// <summary>
 	/// Indicates whether the generator result contains any diagnostics with severity of Error.
@@ -44,6 +45,12 @@ public readonly record struct GeneratorResult<T>
 	/// because regardless of if the consumer has changed its level, the source generator is effectively saying
 	/// it's serious and cannot continue.</remarks>
 	public bool HasErrorDiagnostics { get; private init; }
+
+	/// <summary>
+	/// Indicates whether the generator result contains any diagnostics that block processing
+	/// (see <see cref="ReportableDiagnostic.IsBlocking"/>), regardless of their severity.
+	/// </summary>
+	public bool HasBlockingDiagnostics { get; private init; }
 
 	/// <summary>
 	///	Indicates whether the generator result is empty, meaning it has no value and no diagnostics.
@@ -56,13 +63,12 @@ public readonly record struct GeneratorResult<T>
 	/// <param name="value">The value of the generator result.</param>
 	/// <param name="diagnostics">The diagnostics associated with the result.</param>
 	/// <returns>A successful generator result.</returns>
-	public static GeneratorResult<T> Create(T value, ImmutableArray<DiagnosticInfo> diagnostics)
+	public static GeneratorResult<T> Create(T value, ImmutableArray<ReportableDiagnostic> diagnostics)
 	{
 		var hasValue = value is not null && !EqualityComparer<T>.Default.Equals(value, default!);
 		var hasDiagnostics = !diagnostics.IsDefaultOrEmpty;
-		var hasErrorDiagnostics = diagnostics.Any(d =>
-			d.Descriptor.DefaultSeverity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
-		);
+		var hasErrorDiagnostics = diagnostics.Any(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error);
+		var hasBlockingDiagnostics = diagnostics.Any(d => d.IsBlocking);
 
 		return new()
 		{
@@ -70,8 +76,8 @@ public readonly record struct GeneratorResult<T>
 			Diagnostics = diagnostics,
 			HasValue = hasValue,
 			HasDiagnostics = hasDiagnostics,
-			ShouldProcess = hasValue && !hasErrorDiagnostics,
 			HasErrorDiagnostics = hasErrorDiagnostics,
+			HasBlockingDiagnostics = hasBlockingDiagnostics,
 		};
 	}
 
@@ -81,12 +87,12 @@ public readonly record struct GeneratorResult<T>
 	/// <param name="value">The value of the generator result.</param>
 	/// <param name="diagnostics">Optional diagnostics associated with the result.</param>
 	/// <returns>A successful generator result.</returns>
-	public static GeneratorResult<T> Create(T value, params DiagnosticInfo[] diagnostics) =>
+	public static GeneratorResult<T> Create(T value, params ReportableDiagnostic[] diagnostics) =>
 		Create(
 			value,
 			diagnostics is null || diagnostics.Length == 0
-				? EquatableArray<DiagnosticInfo>.Empty
-				: EquatableArray<DiagnosticInfo>.Create(diagnostics)
+				? EquatableArray<ReportableDiagnostic>.Empty
+				: EquatableArray<ReportableDiagnostic>.Create(diagnostics)
 		);
 
 	/// <summary>
@@ -95,7 +101,7 @@ public readonly record struct GeneratorResult<T>
 	/// <param name="diagnostics">The diagnostics associated with the failure result.</param>
 	/// <returns>A failed generator result.</returns>
 	/// <exception cref="ArgumentException">Thrown when no diagnostics are provided.</exception>
-	public static GeneratorResult<T> Create(params DiagnosticInfo[] diagnostics)
+	public static GeneratorResult<T> Create(params ReportableDiagnostic[] diagnostics)
 	{
 		if (diagnostics is null || diagnostics.Length == 0)
 		{
@@ -105,18 +111,17 @@ public readonly record struct GeneratorResult<T>
 			);
 		}
 
-		var hasErrorDiagnostics = diagnostics.Any(d =>
-			d.Descriptor.DefaultSeverity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
-		);
+		var hasErrorDiagnostics = diagnostics.Any(d => d.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error);
+		var hasBlockingDiagnostics = diagnostics.Any(d => d.IsBlocking);
 
 		return new()
 		{
 			Value = default!,
-			Diagnostics = EquatableArray<DiagnosticInfo>.Create(diagnostics),
+			Diagnostics = EquatableArray<ReportableDiagnostic>.Create(diagnostics),
 			HasValue = false,
 			HasDiagnostics = true,
-			ShouldProcess = false,
 			HasErrorDiagnostics = hasErrorDiagnostics,
+			HasBlockingDiagnostics = hasBlockingDiagnostics,
 		};
 	}
 

@@ -141,7 +141,7 @@ public sealed class AttributeDataModelSymbolPropertyCodeFixProvider : CodeFixPro
 			var isTypeIdentity = fixAllContext.CodeActionEquivalenceKey == TypeIdentityEquivalenceKey;
 			var newTypeName = isTypeIdentity ? "global::Purview.SourceGeneratorFramework.TypeIdentity" : "string";
 
-			var replacements = new List<(SyntaxNode oldNode, SyntaxNode newNode)>();
+			List<(SyntaxNode oldNode, SyntaxNode newNode)> replacements = [];
 			foreach (var diagnostic in diagnostics)
 			{
 				var node = root.FindNode(diagnostic.Location.SourceSpan);

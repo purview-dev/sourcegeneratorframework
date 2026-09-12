@@ -91,8 +91,8 @@ sealed class EmittedAssembly : IDisposable
 
 		public MetadataView(byte[] bytes, Compilation compilation)
 		{
-			var resolver = new PathAssemblyResolver(MetadataPaths(compilation));
-			var context = new MetadataLoadContext(resolver);
+			PathAssemblyResolver resolver = new(MetadataPaths(compilation));
+			MetadataLoadContext context = new(resolver);
 
 			Assembly = context.LoadFromByteArray(bytes);
 			Context = context;
@@ -103,7 +103,7 @@ sealed class EmittedAssembly : IDisposable
 
 	static HashSet<string> MetadataPaths(Compilation compilation)
 	{
-		var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
 		paths.UnionWith(SourceGeneratorHelpers.TrustedAssemblies);
 
 		foreach (var reference in compilation.References.OfType<PortableExecutableReference>())

@@ -5,6 +5,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
+		<ProjectReference Include="..\SourceGeneratorFramework.Analyzers\SourceGeneratorFramework.Analyzers.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

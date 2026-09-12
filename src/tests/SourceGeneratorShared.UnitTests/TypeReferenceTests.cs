@@ -11,7 +11,7 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task RenderFullName_RendersComposedSuffixesInSourceOrder()
 	{
-		var int32 = new TypeIdentity(SpecialType.System_Int32);
+		TypeIdentity int32 = new(SpecialType.System_Int32);
 
 		await Assert.That(int32.AsTypeReference().RenderFullName).IsEqualTo("int");
 		await Assert.That(int32.MakeArray().RenderFullName).IsEqualTo("int[]");
@@ -98,7 +98,7 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Nullable_GivenDisabledSettings_DoesNotAppendAnnotation()
 	{
-		var settings = new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = false };
+		GenerationSettings settings = new("TestGenerator", "1.0.0") { IsNullableContextEnabled = false };
 		var @string = TypeIdentity.Create<string>();
 
 		await Assert.That(@string.MakeNullable(settings).RenderFullName).IsEqualTo("string");
@@ -108,8 +108,8 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Nullable_GivenEnabledOrUnknownSettings_AppendsAnnotation()
 	{
-		var enabled = new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true };
-		var unknown = new GenerationSettings("TestGenerator", "1.0.0");
+		GenerationSettings enabled = new("TestGenerator", "1.0.0") { IsNullableContextEnabled = true };
+		GenerationSettings unknown = new("TestGenerator", "1.0.0");
 
 		await Assert.That(TypeIdentity.Create<string>().MakeNullable(enabled).RenderFullName).IsEqualTo("string?");
 		await Assert.That(TypeIdentity.Create<string>().MakeNullable(unknown).RenderFullName).IsEqualTo("string?");
@@ -118,12 +118,10 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Nullable_GivenWriterContext_BehavesLikeSettings()
 	{
-		var disabled = new CodeWriter(
+		CodeWriter disabled = new(
 			new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = false }
 		);
-		var enabled = new CodeWriter(
-			new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true }
-		);
+		CodeWriter enabled = new(new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true });
 		var @string = TypeIdentity.Create<string>();
 
 		await Assert.That(@string.MakeNullable(disabled).RenderFullName).IsEqualTo("string");
@@ -133,12 +131,12 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Nullable_GivenAlwaysModeAndDisabledContext_AppendsAnnotation()
 	{
-		var settings = new GenerationSettings("TestGenerator", "1.0.0")
+		GenerationSettings settings = new("TestGenerator", "1.0.0")
 		{
 			NullableDirectiveMode = NullableDirectiveMode.Always,
 			IsNullableContextEnabled = false,
 		};
-		var writer = new CodeWriter(settings);
+		CodeWriter writer = new(settings);
 		var @string = TypeIdentity.Create<string>();
 
 		await Assert.That(@string.MakeNullable(settings).RenderFullName).IsEqualTo("string?");
@@ -148,12 +146,12 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Nullable_GivenDisableModeAndEnabledContext_DoesNotAppendAnnotation()
 	{
-		var settings = new GenerationSettings("TestGenerator", "1.0.0")
+		GenerationSettings settings = new("TestGenerator", "1.0.0")
 		{
 			NullableDirectiveMode = NullableDirectiveMode.Disable,
 			IsNullableContextEnabled = true,
 		};
-		var writer = new CodeWriter(settings);
+		CodeWriter writer = new(settings);
 		var @string = TypeIdentity.Create<string>();
 
 		await Assert.That(@string.MakeNullable(settings).RenderFullName).IsEqualTo("string");
@@ -413,7 +411,7 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Equality_DistinguishesModifierOrder()
 	{
-		var int32 = new TypeIdentity(SpecialType.System_Int32);
+		TypeIdentity int32 = new(SpecialType.System_Int32);
 
 		await Assert.That(int32.MakeNullable().MakeArray()).IsNotEqualTo(int32.MakeArray().Nullable());
 		await Assert.That(int32.MakeArray()).IsEqualTo(int32.MakeArray());
@@ -424,7 +422,7 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task Equals_GivenPlainNamedType_MatchesUnderlyingValueObject()
 	{
-		var int32 = new TypeIdentity(SpecialType.System_Int32);
+		TypeIdentity int32 = new(SpecialType.System_Int32);
 
 		await Assert.That(int32.AsTypeReference().Equals(int32)).IsTrue();
 		await Assert.That(int32.MakeArray().Equals(int32)).IsFalse();
@@ -450,7 +448,7 @@ public sealed class TypeReferenceTests
 	[Test]
 	public async Task MakeArray_GivenInvalidRank_Throws()
 	{
-		var int32 = new TypeIdentity(SpecialType.System_Int32);
+		TypeIdentity int32 = new(SpecialType.System_Int32);
 
 		await Assert.That(void () => _ = int32.MakeArray(0)).Throws<ArgumentOutOfRangeException>();
 	}

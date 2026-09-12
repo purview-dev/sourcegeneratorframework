@@ -19,9 +19,10 @@ public partial class CodeWriterSampleGenerator : IIncrementalGenerator
 		var targets = IncrementalPipeline.ForAttributeWithMetadataName(
 			context,
 			ExampleGenerator.PurviewTypeLibrary.GenerateCodeWriterSampleAttribute,
-			static (ctx, ct) =>
+			static (ctx, _) =>
 			{
-				if (ctx.SemanticModel.GetDeclaredSymbol(ctx.TargetNode, ct) is not INamedTypeSymbol symbol)
+				// ForAttributeWithMetadataName already resolves TargetSymbol.
+				if (ctx.TargetSymbol is not INamedTypeSymbol symbol)
 					return default;
 
 				// The generator will emit a sample class for every type annotated with the attribute, so the target is the

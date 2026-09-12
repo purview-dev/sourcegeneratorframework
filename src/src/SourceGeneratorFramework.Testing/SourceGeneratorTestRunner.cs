@@ -86,7 +86,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 			compilationDiagnostics = emitted.Diagnostics;
 		}
 
-		var compilationResult = new CompilationRunResult(outputCompilation, assembly, compilationDiagnostics)
+		CompilationRunResult compilationResult = new(outputCompilation, assembly, compilationDiagnostics)
 		{
 			Emitted = emitted,
 		};
@@ -156,7 +156,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 		var driver = CreateDriver(generator, options, loggingSessionId);
 		var references = SourceGeneratorHelpers.ResolveReferences(options, typeof(TGenerator).Assembly);
 		var runs = ImmutableArray.CreateBuilder<IncrementalCacheRun>(materializedInputs.Count);
-		var compilationCache = new Dictionary<string, Compilation>(StringComparer.Ordinal);
+		Dictionary<string, Compilation> compilationCache = new(StringComparer.Ordinal);
 
 		foreach (var input in materializedInputs)
 		{
@@ -405,7 +405,7 @@ public sealed class SourceGeneratorTestRunner<TGenerator>
 
 	static EmittedAssembly CompileToAssembly(Compilation compilation, CancellationToken cancellationToken)
 	{
-		using var assemblyStream = new MemoryStream();
+		using MemoryStream assemblyStream = new();
 		var emitResult = compilation.Emit(assemblyStream, cancellationToken: cancellationToken);
 
 		return new EmittedAssembly(emitResult.Success ? assemblyStream.ToArray() : null, compilation)

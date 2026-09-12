@@ -64,7 +64,7 @@ public abstract class RoslynTestRunner
 		if (!options.AdditionalSources.IsDefaultOrEmpty)
 			sources = sources.Concat(options.AdditionalSources);
 
-		var workspace = new AdhocWorkspace();
+		AdhocWorkspace workspace = new();
 		var projectId = ProjectId.CreateNewId();
 		var solution = workspace
 			.CurrentSolution.AddProject(

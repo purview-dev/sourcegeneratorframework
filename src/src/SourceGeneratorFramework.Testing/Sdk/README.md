@@ -241,12 +241,24 @@ var reasons = result.Runs[1].Steps["ForAttribute_MyAttribute"]
     .SelectMany(step => step.Outputs.Select(output => output.Reason));
 ```
 
+`IncrementalCacheRunExtensions.GetStepReasons()` flattens a run's steps into a
+`ImmutableDictionary<string, ImmutableArray<IncrementalStepRunReason>>`, and the TUnit assertions
+`AllStepsNew`, `AllStepsCachedOrUnchanged`, `StepIsCached`, `StepIsModified`, and `HasStepReason` make the
+checks fluent:
+
+```csharp
+await Assert.That(result.Runs[0]).AllStepsNew();
+await Assert.That(result.Runs[1]).StepIsModified("ForAttribute_MyAttribute");
+await Assert.That(result.Runs[1]).StepIsCached("GetGenerationConfiguration");
+```
+
 `RunIncrementalAsync(sources, options, ct)` runs the same source set twice (the common "unchanged rerun is
 cached" case). Per-run MSBuild-property changes use `new IncrementalRunInput(sources, [...])`. Reference
 cache tests live in the `Purview.SourceGeneratorFramework` source repository —
-`SourceGeneratorShared.UnitTests/IncrementalPipelineCacheTests` (framework stages) and
-`SourceGeneratorFramework.ExampleGenerator.UnitTests/ServiceRegistrationCacheTests` (an end-to-end
-generator) — and should be replicated into your own test project rather than copied from the package.
+`SourceGeneratorShared.UnitTests/IncrementalPipelineCacheTests` (framework stages),
+`SourceGeneratorFramework.ExampleGenerator.UnitTests/StepCacheTests` (the canonical golden-matrix sample),
+and `.../ServiceRegistrationCacheTests` (an end-to-end generator) — and should be replicated into your own
+test project rather than copied from the package. See `docs/step-cache-tests.md` for the full walkthrough.
 
 ## License
 

@@ -43,7 +43,7 @@ public sealed class RefactoringTestRunner<TRefactoring> : RoslynTestRunner
 		var span = ResolveSpan(options, compilation);
 
 		List<CodeAction> actions = [];
-		var context = new CodeRefactoringContext(document, span, actions.Add, cancellationToken);
+		CodeRefactoringContext context = new(document, span, actions.Add, cancellationToken);
 		await new TRefactoring().ComputeRefactoringsAsync(context);
 
 		var action =
@@ -78,7 +78,7 @@ public sealed class RefactoringTestRunner<TRefactoring> : RoslynTestRunner
 
 		if (options.NodeSelector is not null)
 		{
-			var query = new CodeQuery([.. compilation.SyntaxTrees], compilation);
+			CodeQuery query = new([.. compilation.SyntaxTrees], compilation);
 
 			return options.NodeSelector(query).Span;
 		}

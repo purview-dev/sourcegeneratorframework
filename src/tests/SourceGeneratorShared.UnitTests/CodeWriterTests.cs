@@ -372,7 +372,7 @@ public class CodeWriterTests
 	public async Task BlockNamespaceAndTopLevelType_InsertsBlankLineBetweenDeclarations()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("TopLevel");
+		TypeDeclarationOptions declaration = new("TopLevel");
 
 		writer.BlockNamespace("First", body => body.Line("class Nested { }"));
 		writer.Class(declaration, static _ => { });
@@ -392,7 +392,7 @@ public class CodeWriterTests
 	public async Task BlockNamespace_TypeValueObject_WritesNamespaceBlock()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeIdentity("C", "Test");
+		TypeIdentity typeValue = new("C", "Test");
 
 		using (writer.BlockNamespaceScope(typeValue))
 		{
@@ -410,7 +410,7 @@ public class CodeWriterTests
 	public async Task BlockNamespace_TypeValueObjectWithGlobalNamespace_ReturnsNoOpScope()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeIdentity("C", null);
+		TypeIdentity typeValue = new("C", null);
 
 		using (writer.BlockNamespaceScope(typeValue))
 		{
@@ -427,7 +427,7 @@ public class CodeWriterTests
 	public async Task FileScopedNamespace_TypeValueObject_WritesNamespace()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeIdentity("C", "Test");
+		TypeIdentity typeValue = new("C", "Test");
 
 		writer.FileScopedNamespace(typeValue);
 
@@ -440,7 +440,7 @@ public class CodeWriterTests
 	public async Task FileScopedNamespace_TypeValueObjectWithGlobalNamespace_WritesNothing()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var typeValue = new TypeIdentity("C", null);
+		TypeIdentity typeValue = new("C", null);
 
 		writer.FileScopedNamespace(typeValue);
 
@@ -479,7 +479,7 @@ public class CodeWriterTests
 	public async Task Class_WithOptions_WritesModifiersInheritanceAndConstraints()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Repository")
+		TypeDeclarationOptions declaration = new("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			BaseType = Type("RepositoryBase").Identity.MakeGeneric(Type("T")),
@@ -559,7 +559,7 @@ public class CodeWriterTests
 	{
 		TypeIdentity? identity = new TypeIdentity("TestingHostKit", "Testing.HostKitNamespace");
 
-		var declaration = new TypeDeclarationOptions(identity, TypeDeclarationAccessibility.Public);
+		TypeDeclarationOptions declaration = new(identity, TypeDeclarationAccessibility.Public);
 
 		await Assert.That(declaration.Name).IsEqualTo("TestingHostKit");
 		await Assert.That(declaration.Name).IsNotEqualTo("global::Testing.HostKitNamespace.TestingHostKit");
@@ -574,7 +574,7 @@ public class CodeWriterTests
 			new TypeIdentity("DefaultAspireResource", "Purview.Aspire.ResourceKit")
 		);
 
-		var declaration = new TypeDeclarationOptions("RedisResourceKit")
+		TypeDeclarationOptions declaration = new("RedisResourceKit")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsPartial = true,
@@ -605,7 +605,7 @@ public class CodeWriterTests
 			new TypeIdentity("RedisResourceKit", "Testing")
 		);
 
-		var declaration = new TypeDeclarationOptions("RedisResourceKit")
+		TypeDeclarationOptions declaration = new("RedisResourceKit")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsPartial = true,
@@ -629,7 +629,7 @@ public class CodeWriterTests
 	public async Task BaseType_OpenGeneric_ThrowsValidationError()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("C")
+		TypeDeclarationOptions declaration = new("C")
 		{
 			BaseType = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2),
 		};
@@ -640,7 +640,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task MakeGeneric_ArityMismatch_Throws()
 	{
-		var open = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2);
+		TypeIdentity open = new("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2);
 
 		await Assert
 			.That(() => open.MakeGeneric(new TypeIdentity("DefaultAspireResource", "Purview.Aspire.ResourceKit")))
@@ -651,12 +651,12 @@ public class CodeWriterTests
 	public async Task GenerateResourceKit_OpenGenericTypeArgument_ThrowsClearError()
 	{
 		var writer = CodeWriter.CreateTestWriter();
-		var resourceKit = new TypeIdentity("RedisResourceKit", "Testing");
+		TypeIdentity resourceKit = new("RedisResourceKit", "Testing");
 		var resourceKitBase = new TypeIdentity("ResourceKitBase", "Purview.Aspire.ResourceKit", arity: 2).MakeGeneric(
 			new TypeIdentity("HostKitBase", "Purview.Aspire.ResourceKit", arity: 1),
 			resourceKit
 		);
-		var resourceDefinitionAttribute = new AttributeDeclarationOptions(
+		AttributeDeclarationOptions resourceDefinitionAttribute = new(
 			new TypeIdentity("ResourceDefinitionAttribute", "Purview.Aspire.ResourceKit")
 		);
 
@@ -681,7 +681,7 @@ public class CodeWriterTests
 	public async Task RecordStruct_WithOptions_WritesReadonlyRecordStruct()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Identifier")
+		TypeDeclarationOptions declaration = new("Identifier")
 		{
 			Accessibility = TypeDeclarationAccessibility.Internal,
 			IsReadOnly = true,
@@ -731,7 +731,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Extensions")
+		TypeDeclarationOptions declaration = new("Extensions")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
@@ -754,7 +754,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("ServiceBase")
+		TypeDeclarationOptions declaration = new("ServiceBase")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsAbstract = true,
@@ -777,7 +777,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Invalid") { IsAbstract = true };
+		TypeDeclarationOptions declaration = new("Invalid") { IsAbstract = true };
 
 		// Act
 		CodeWriter.BlockScope Action() => writer.StructScope(declaration);
@@ -791,7 +791,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Invalid") { Kind = TypeDeclarationKind.Struct, IsStatic = true };
+		TypeDeclarationOptions declaration = new("Invalid") { Kind = TypeDeclarationKind.Struct, IsStatic = true };
 
 		// Act
 		CodeWriter.BlockScope Action() => writer.TypeScope(declaration);
@@ -804,7 +804,7 @@ public class CodeWriterTests
 	public async Task Struct_WithBaseType_Throws()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Invalid") { BaseType = Type("BaseType") };
+		TypeDeclarationOptions declaration = new("Invalid") { BaseType = Type("BaseType") };
 
 		await Assert.That(() => writer.StructScope(declaration)).Throws<ArgumentException>();
 	}
@@ -813,7 +813,7 @@ public class CodeWriterTests
 	public async Task Class_WithPrimaryConstructor_WritesParametersBeforeBaseType()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Repository")
+		TypeDeclarationOptions declaration = new("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			PrimaryConstructorParameters = [new("connectionString", Type("string")), new("logger", Type("ILogger"))],
@@ -837,7 +837,7 @@ public class CodeWriterTests
 	public async Task Class_WithEmptyBaseType_DoesNotWriteBaseListColon()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("ResourceKit") { BaseType = TypeReference.Empty };
+		TypeDeclarationOptions declaration = new("ResourceKit") { BaseType = TypeReference.Empty };
 
 		writer.Class(declaration, static _ => { });
 
@@ -850,7 +850,7 @@ public class CodeWriterTests
 	public async Task Class_WithEmptyBaseAndInterfaces_WritesOnlyNonEmptyInterfaces()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("ResourceKit")
+		TypeDeclarationOptions declaration = new("ResourceKit")
 		{
 			BaseType = TypeReference.Empty,
 			Interfaces =
@@ -872,7 +872,7 @@ public class CodeWriterTests
 	public async Task Constructor_WritesParametersInitializerAndBody()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new ConstructorDeclarationOptions("Repository")
+		ConstructorDeclarationOptions declaration = new("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			Parameters = [new("connectionString", Type("string")), new("logger", Type("ILogger"))],
@@ -944,7 +944,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("IRepository")
+		TypeDeclarationOptions declaration = new("IRepository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			Interfaces = [Type("IAsyncDisposable")],
@@ -972,7 +972,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Status")
+		TypeDeclarationOptions declaration = new("Status")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			EnumUnderlyingType = Type("byte"),
@@ -1087,7 +1087,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Status") { Accessibility = TypeDeclarationAccessibility.Public };
+		TypeDeclarationOptions declaration = new("Status") { Accessibility = TypeDeclarationAccessibility.Public };
 
 		// Act
 		writer.Enum(
@@ -1138,7 +1138,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Status") { Accessibility = TypeDeclarationAccessibility.Public };
+		TypeDeclarationOptions declaration = new("Status") { Accessibility = TypeDeclarationAccessibility.Public };
 
 		// Act
 		writer.Enum(
@@ -1188,7 +1188,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Factory")
+		TypeDeclarationOptions declaration = new("Factory")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			DelegateReturnType = Type("TResult"),
@@ -1282,7 +1282,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("CreateAsync", Type("Task").Identity.MakeGeneric(Type("T")))
+		MethodDeclarationOptions declaration = new("CreateAsync", Type("Task").Identity.MakeGeneric(Type("T")))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
@@ -1312,7 +1312,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+		MethodDeclarationOptions declaration = new("Count", Type("int")) { ExpressionBody = "items.Count" };
 
 		// Act
 		writer.MethodExpression(declaration);
@@ -1329,7 +1329,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = expressionBody };
+		MethodDeclarationOptions declaration = new("Count", Type("int")) { ExpressionBody = expressionBody };
 
 		// Act / Assert
 		await Assert.That(() => writer.MethodExpression(declaration)).Throws<ArgumentException>();
@@ -1341,7 +1341,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int"));
+		MethodDeclarationOptions declaration = new("Count", Type("int"));
 
 		// Act
 		writer.MethodExpression(declaration, expression => expression.Write("items.Count"));
@@ -1355,7 +1355,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int"));
+		MethodDeclarationOptions declaration = new("Count", Type("int"));
 
 		// Act / Assert
 		await Assert.That(() => writer.MethodExpression(declaration, null!)).Throws<ArgumentNullException>();
@@ -1366,7 +1366,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+		MethodDeclarationOptions declaration = new("Count", Type("int")) { ExpressionBody = "items.Count" };
 
 		// Act / Assert
 		await Assert
@@ -1380,7 +1380,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int"))
+		MethodDeclarationOptions declaration = new("Count", Type("int"))
 		{
 			IsPartial = true,
 			ExpressionBody = "items.Count",
@@ -1396,7 +1396,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int")) { IsPartial = true };
+		MethodDeclarationOptions declaration = new("Count", Type("int")) { IsPartial = true };
 
 		// Act / Assert
 		await Assert
@@ -1410,7 +1410,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+		MethodDeclarationOptions declaration = new("Count", Type("int")) { ExpressionBody = "items.Count" };
 
 		// Act / Assert
 		await Assert.That(() => writer.PartialMethod(declaration)).Throws<ArgumentException>();
@@ -1422,7 +1422,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int")) { ExpressionBody = "items.Count" };
+		MethodDeclarationOptions declaration = new("Count", Type("int")) { ExpressionBody = "items.Count" };
 
 		// Act / Assert
 		await Assert
@@ -1436,7 +1436,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Count", Type("int"));
+		MethodDeclarationOptions declaration = new("Count", Type("int"));
 
 		// Act
 		writer.Method(declaration, body => body.Line("return items.Count;"));
@@ -1479,7 +1479,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var generatedCode = new AttributeDeclarationOptions(new TypeIdentity("GeneratedCode", null))
+		AttributeDeclarationOptions generatedCode = new(new TypeIdentity("GeneratedCode", null))
 		{
 			Arguments =
 			[
@@ -1488,12 +1488,12 @@ public class CodeWriterTests
 				new(false) { Name = "Enabled", IsPropertyAssignment = true },
 			],
 		};
-		var type = new TypeDeclarationOptions("Service")
+		TypeDeclarationOptions type = new("Service")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			Attributes = [generatedCode],
 		};
-		var method = new MethodDeclarationOptions("TryGet", Type("bool"))
+		MethodDeclarationOptions method = new("TryGet", Type("bool"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			Attributes = [new(new TypeIdentity("Obsolete", null))],
@@ -1609,9 +1609,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var attribute = new AttributeDeclarationOptions(
-			new TypeIdentity("HostKitAttribute", "Purview.Aspire.ResourceKit")
-		)
+		AttributeDeclarationOptions attribute = new(new TypeIdentity("HostKitAttribute", "Purview.Aspire.ResourceKit"))
 		{
 			Arguments = [new AttributeArgumentOptions(true) { Name = "GenerateOptions", IsPropertyAssignment = true }],
 		};
@@ -1635,7 +1633,7 @@ public class CodeWriterTests
 	public async Task AttributeTypeValueObject_GivenDeclarationContexts_RendersUnderlyingType()
 	{
 		// Arrange
-		var attributeType = new TypeIdentity("RegistryAttribute", "Example");
+		TypeIdentity attributeType = new("RegistryAttribute", "Example");
 		var writer = CodeWriterFactory.ForTests();
 
 		// Act
@@ -1702,7 +1700,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var method = new MethodDeclarationOptions("Use", Type("void"))
+		MethodDeclarationOptions method = new("Use", Type("void"))
 		{
 			Parameters =
 			[
@@ -1725,7 +1723,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		PropertyDeclarationOptions declaration = new("Name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			HasSetter = true,
@@ -1747,7 +1745,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		PropertyDeclarationOptions declaration = new("Name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsInitOnly = true,
@@ -1768,7 +1766,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Value", Type("int"))
+		PropertyDeclarationOptions declaration = new("Value", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			HasSetter = true,
@@ -1796,7 +1794,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Value", Type("int"))
+		PropertyDeclarationOptions declaration = new("Value", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsInitOnly = true,
@@ -1823,7 +1821,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Count", Type("int"))
+		PropertyDeclarationOptions declaration = new("Count", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			ExpressionBody = "_items.Count",
@@ -1875,7 +1873,7 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new FieldDeclarationOptions("Empty", Type("Example"))
+		FieldDeclarationOptions declaration = new("Empty", Type("Example"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsStatic = true,
@@ -1945,8 +1943,8 @@ public class CodeWriterTests
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var first = new MethodDeclarationOptions("First", Type("void"));
-		var second = new MethodDeclarationOptions("Second", Type("void"));
+		MethodDeclarationOptions first = new("First", Type("void"));
+		MethodDeclarationOptions second = new("Second", Type("void"));
 
 		// Act
 		using (writer.MethodScope(first))
@@ -2324,7 +2322,7 @@ public class CodeWriterTests
 	public async Task Assignment_WithObjectCreationOptions_WritesOptionalVarAndMixedArguments()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(
+		ObjectCreationOptions creation = new(
 			Type("ASpecificType"),
 			"propVal1",
 			new MethodCallArgumentOptions("propVal2") { Name = "second" }
@@ -2559,9 +2557,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task Type_GivenNullableDisabledContext_StripsReferenceAnnotations()
 	{
-		var writer = new CodeWriter(
-			new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = false }
-		);
+		CodeWriter writer = new(new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = false });
 
 		writer.Type(TypeIdentity.Create<string>().MakeNullable());
 		writer.Write(" ");
@@ -2575,10 +2571,8 @@ public class CodeWriterTests
 	[Test]
 	public async Task Type_GivenNullableEnabledOrUnknownContext_KeepsAnnotations()
 	{
-		var enabled = new CodeWriter(
-			new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true }
-		);
-		var unknown = new CodeWriter(new GenerationSettings("TestGenerator", "1.0.0"));
+		CodeWriter enabled = new(new GenerationSettings("TestGenerator", "1.0.0") { IsNullableContextEnabled = true });
+		CodeWriter unknown = new(new GenerationSettings("TestGenerator", "1.0.0"));
 
 		enabled.Type(TypeIdentity.Create<string>().MakeNullable());
 		unknown.Type(TypeIdentity.Create<string>().MakeNullable());
@@ -2590,7 +2584,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task Type_GivenAlwaysModeAndDisabledContext_KeepsAnnotations()
 	{
-		var writer = new CodeWriter(
+		CodeWriter writer = new(
 			new GenerationSettings("TestGenerator", "1.0.0")
 			{
 				NullableDirectiveMode = NullableDirectiveMode.Always,
@@ -2608,7 +2602,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task Type_GivenDisableModeAndEnabledContext_StripsReferenceAnnotations()
 	{
-		var writer = new CodeWriter(
+		CodeWriter writer = new(
 			new GenerationSettings("TestGenerator", "1.0.0")
 			{
 				NullableDirectiveMode = NullableDirectiveMode.Disable,
@@ -2626,7 +2620,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task AutoGeneratedHeader_GivenAlwaysModeAndDisabledContext_WritesDirective()
 	{
-		var writer = new CodeWriter(
+		CodeWriter writer = new(
 			new GenerationSettings("TestGenerator", "1.0.0")
 			{
 				NullableDirectiveMode = NullableDirectiveMode.Always,
@@ -2642,7 +2636,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task AutoGeneratedHeader_GivenDisableModeAndEnabledContext_OmitsDirective()
 	{
-		var writer = new CodeWriter(
+		CodeWriter writer = new(
 			new GenerationSettings("TestGenerator", "1.0.0")
 			{
 				NullableDirectiveMode = NullableDirectiveMode.Disable,
@@ -2666,7 +2660,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task GeneratorIdentity_GivenNoHeaderArguments_UsesDefaultsAndDecoratesDeclarations()
 	{
-		var writer = new CodeWriter(new("HostKitGenerator", "2.3.4"), throwOnUnclosedScopes: false);
+		CodeWriter writer = new(new("HostKitGenerator", "2.3.4"), throwOnUnclosedScopes: false);
 
 		writer.AutoGeneratedHeader();
 		writer.Class(
@@ -2689,7 +2683,7 @@ public class CodeWriterTests
 	public async Task Constructor_WithMultilineParameters_WritesInitializerOnNewLine()
 	{
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new ConstructorDeclarationOptions("Repository")
+		ConstructorDeclarationOptions declaration = new("Repository")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			WriteParametersOnSeparateLines = true,
@@ -2716,7 +2710,7 @@ public class CodeWriterTests
 	[Test]
 	public async Task GeneratorIdentity_GivenConstField_DoesNotWriteInvalidCoverageAttribute()
 	{
-		var writer = new CodeWriter(new("HostKitGenerator", "2.3.4"), throwOnUnclosedScopes: false);
+		CodeWriter writer = new(new("HostKitGenerator", "2.3.4"), throwOnUnclosedScopes: false);
 
 		writer.Field(
 			new FieldDeclarationOptions("SectionName", TypeIdentity.Create<string>())
@@ -3238,7 +3232,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"==",
 			Type("bool"),
 			new("left", Type("global::Testing.Name")),
@@ -3268,7 +3262,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"<",
 			Type("bool"),
 			new("left", Type("global::Testing.Money")),
@@ -3300,7 +3294,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"==",
 			Type("bool"),
 			new("left", Type("Name")),
@@ -3323,7 +3317,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"==",
 			Type("bool"),
 			new("left", Type("Name")),
@@ -3339,7 +3333,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"==",
 			Type("bool"),
 			new("left", Type("Name")),
@@ -3359,7 +3353,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("OnValidate", Type("void"))
+		MethodDeclarationOptions declaration = new("OnValidate", Type("void"))
 		{
 			IsPartial = true,
 			IsReadOnly = true,
@@ -3388,7 +3382,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Apply", Type("void")) { IsPartial = true };
+		MethodDeclarationOptions declaration = new("Apply", Type("void")) { IsPartial = true };
 
 		// Act
 		writer.PartialMethod(declaration);
@@ -3402,7 +3396,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new MethodDeclarationOptions("Invalid", Type("void")) { IsReadOnly = true, IsStatic = true };
+		MethodDeclarationOptions declaration = new("Invalid", Type("void")) { IsReadOnly = true, IsStatic = true };
 
 		// Act / Assert
 		await Assert.That(() => writer.MethodScope(declaration)).Throws<ArgumentException>();
@@ -3414,7 +3408,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("global::Testing.OrderAggregate"))
+		ObjectCreationOptions creation = new(Type("global::Testing.OrderAggregate"))
 		{
 			InitializerMembers =
 			[
@@ -3443,7 +3437,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(
+		ObjectCreationOptions creation = new(
 			Type("global::Testing.OrderEvents.OrderCreatedEvent"),
 			"customerId",
 			"total"
@@ -3472,7 +3466,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"))
+		ObjectCreationOptions creation = new(Type("Order"))
 		{
 			InitializerMembers = [new("A", "1"), new("B", "2")],
 			WriteInitializerMembersOnSeparateLines = false,
@@ -3490,7 +3484,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"));
+		ObjectCreationOptions creation = new(Type("Order"));
 
 		// Act
 		writer.Assignment("var order", creation);
@@ -3504,7 +3498,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"));
+		ObjectCreationOptions creation = new(Type("Order"));
 
 		// Act
 		writer.Assignment("var order", creation, forceNotNull: true);
@@ -3518,7 +3512,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"))
+		ObjectCreationOptions creation = new(Type("Order"))
 		{
 			InitializerMembers = [new("A", "1")],
 			WriteInitializerMembersOnSeparateLines = false,
@@ -3536,7 +3530,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"), "aParameterNameThatForcesTheArgumentsOntoTheirOwnLine")
+		ObjectCreationOptions creation = new(Type("Order"), "aParameterNameThatForcesTheArgumentsOntoTheirOwnLine")
 		{
 			WriteArgumentsOnSeparateLines = true,
 			InitializerMembers = [new("A", "1")],
@@ -3563,7 +3557,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("global::Testing.OrderAggregateJsonModel"))
+		ObjectCreationOptions creation = new(Type("global::Testing.OrderAggregateJsonModel"))
 		{
 			InitializerMembers = [new("Details", "Details"), new("CustomerId", "CustomerId")],
 		};
@@ -3588,7 +3582,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"), "customerId", "total")
+		ObjectCreationOptions creation = new(Type("Order"), "customerId", "total")
 		{
 			InitializerMembers = [new("CustomerId", "customerId"), new("Total", "total")],
 		};
@@ -3613,7 +3607,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"))
+		ObjectCreationOptions creation = new(Type("Order"))
 		{
 			InitializerMembers = [new("A", "1"), new("B", "2")],
 			WriteInitializerMembersOnSeparateLines = false,
@@ -3631,7 +3625,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"));
+		ObjectCreationOptions creation = new(Type("Order"));
 
 		// Act
 		writer.Return(creation);
@@ -3645,7 +3639,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var creation = new ObjectCreationOptions(Type("Order"));
+		ObjectCreationOptions creation = new(Type("Order"));
 
 		// Act
 		writer.Return(creation, forceNotNull: true);
@@ -3937,7 +3931,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"implicit",
 			Type("global::Testing.Widget"),
 			new("source", Type("global::Testing.RawWidget"))
@@ -3966,7 +3960,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"explicit",
 			Type("global::Testing.RawWidget"),
 			new("widget", Type("global::Testing.Widget"))
@@ -3996,7 +3990,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new OperatorDeclarationOptions(
+		OperatorDeclarationOptions declaration = new(
 			"-",
 			Type("global::Testing.Money"),
 			new("value", Type("global::Testing.Money"))
@@ -4026,7 +4020,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		PropertyDeclarationOptions declaration = new("Name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsRequired = true,
@@ -4047,7 +4041,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new FieldDeclarationOptions("_name", Type("string"))
+		FieldDeclarationOptions declaration = new("_name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsRequired = true,
@@ -4067,7 +4061,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new IndexerDeclarationOptions(Type("string"), [new("index", Type("int"))])
+		IndexerDeclarationOptions declaration = new(Type("string"), [new("index", Type("int"))])
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			HasSetter = true,
@@ -4087,7 +4081,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new IndexerDeclarationOptions(Type("string"), [new("index", Type("int"))])
+		IndexerDeclarationOptions declaration = new(Type("string"), [new("index", Type("int"))])
 		{
 			ExpressionBody = "_items[index]",
 		};
@@ -4106,7 +4100,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new IndexerDeclarationOptions(Type("string"), [new("index", Type("int"))])
+		IndexerDeclarationOptions declaration = new(Type("string"), [new("index", Type("int"))])
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			HasSetter = true,
@@ -4277,7 +4271,7 @@ partial void Apply()
 	public async Task GenerationSettings_GivenLanguageVersion_StoresIt()
 	{
 		// Arrange / Act
-		var settings = new GenerationSettings("G") { LanguageVersion = LanguageVersion.CSharp12 };
+		GenerationSettings settings = new("G") { LanguageVersion = LanguageVersion.CSharp12 };
 
 		// Assert
 		await Assert.That(settings.LanguageVersion).IsEqualTo(LanguageVersion.CSharp12);
@@ -4288,7 +4282,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Value", Type("int"))
+		PropertyDeclarationOptions declaration = new("Value", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			HasSetter = true,
@@ -4309,7 +4303,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		PropertyDeclarationOptions declaration = new("Name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsInitOnly = true,
@@ -4330,7 +4324,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Value", Type("int"))
+		PropertyDeclarationOptions declaration = new("Value", Type("int"))
 		{
 			IsFieldBacked = true,
 			ExpressionBody = "field",
@@ -4346,7 +4340,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Buffer")
+		TypeDeclarationOptions declaration = new("Buffer")
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			Kind = TypeDeclarationKind.Struct,
@@ -4369,7 +4363,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new TypeDeclarationOptions("Invalid")
+		TypeDeclarationOptions declaration = new("Invalid")
 		{
 			Kind = TypeDeclarationKind.RecordStruct,
 			IsRefStruct = true,
@@ -4384,7 +4378,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new FieldDeclarationOptions("_value", Type("int"))
+		FieldDeclarationOptions declaration = new("_value", Type("int"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			IsRefField = true,
@@ -4404,7 +4398,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new FieldDeclarationOptions("_value", Type("int")) { IsRefField = true, Initializer = "0" };
+		FieldDeclarationOptions declaration = new("_value", Type("int")) { IsRefField = true, Initializer = "0" };
 
 		// Act / Assert
 		await Assert.That(() => writer.Field(declaration)).Throws<ArgumentException>();
@@ -4537,8 +4531,8 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var left = new ParameterDeclarationOptions("left", Type("global::Testing.Money"));
-		var right = new ParameterDeclarationOptions("right", Type("global::Testing.Money"));
+		ParameterDeclarationOptions left = new("left", Type("global::Testing.Money"));
+		ParameterDeclarationOptions right = new("right", Type("global::Testing.Money"));
 
 		// Act
 		using (writer.OperatorScope("==", Type("bool"), left, right, TypeDeclarationAccessibility.Public))
@@ -4561,7 +4555,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var source = new ParameterDeclarationOptions("source", Type("global::Testing.RawWidget"));
+		ParameterDeclarationOptions source = new("source", Type("global::Testing.RawWidget"));
 
 		// Act
 		writer.Operator(
@@ -5133,8 +5127,8 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var left = new ParameterDeclarationOptions("left", Type("int"));
-		var right = new ParameterDeclarationOptions("right", Type("int"));
+		ParameterDeclarationOptions left = new("left", Type("int"));
+		ParameterDeclarationOptions right = new("right", Type("int"));
 
 		// Act
 		using (writer.OperatorScope("+", Type("int"), left, right, null))
@@ -5237,8 +5231,8 @@ partial void Apply()
 	public async Task GenerationSettings_DefaultAccessibility_FlowsIntoWriter()
 	{
 		// Arrange
-		var settings = new GenerationSettings("G") { DefaultFieldAccessibility = TypeDeclarationAccessibility.Public };
-		var writer = new CodeWriter(settings);
+		GenerationSettings settings = new("G") { DefaultFieldAccessibility = TypeDeclarationAccessibility.Public };
+		CodeWriter writer = new(settings);
 
 		// Act
 		writer.Field("_value", Type("int"));
@@ -5526,7 +5520,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new PropertyDeclarationOptions("Name", Type("string"))
+		PropertyDeclarationOptions declaration = new("Name", Type("string"))
 		{
 			Accessibility = TypeDeclarationAccessibility.Public,
 			HasSetter = true,
@@ -5561,7 +5555,7 @@ partial void Apply()
 	{
 		// Arrange
 		var writer = CodeWriterFactory.ForTests();
-		var declaration = new FieldDeclarationOptions("_value", TypeReference.Null)
+		FieldDeclarationOptions declaration = new("_value", TypeReference.Null)
 		{
 			Accessibility = TypeDeclarationAccessibility.Private,
 		};

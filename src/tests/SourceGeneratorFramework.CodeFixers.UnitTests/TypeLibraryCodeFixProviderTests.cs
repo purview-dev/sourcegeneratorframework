@@ -236,7 +236,7 @@ public sealed class TypeLibraryCodeFixProviderTests
 	)
 		where TCodeFix : CodeFixProvider, new()
 	{
-		var runner = new CodeFixTestRunner<TypeLibraryValidationAnalyzer, TCodeFix>();
+		CodeFixTestRunner<TypeLibraryValidationAnalyzer, TCodeFix> runner = new();
 		return runner.RunAsync(AttributeDefinition + "\n" + source, options, cancellationToken);
 	}
 }

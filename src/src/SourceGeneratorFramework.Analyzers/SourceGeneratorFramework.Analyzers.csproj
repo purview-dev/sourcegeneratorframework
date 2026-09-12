@@ -1,10 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<IsRoslynComponent>true</IsRoslynComponent>
+		<!--
+			RS2002/RS2003/RS2005 are release-tracking checks that only recognise DiagnosticDescriptors
+			created within this assembly. The ADM/TLB rules are declared once in SourceGeneratorShared
+			so the bundled generators can carry them; release tracking cannot verify them here, so these
+			checks are disabled and the descriptors are tracked as shipped in AnalyzerReleases.Shipped.md.
+		-->
+		<NoWarn>$(NoWarn);RS2002;RS2003;RS2005;</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\SourceGeneratorShared\SourceGeneratorShared.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Purview.SourceGeneratorFramework.CodeFixers" />
 	</ItemGroup>
 
 	<ItemGroup>

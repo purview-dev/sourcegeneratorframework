@@ -7,14 +7,7 @@ namespace Purview.SourceGeneratorFramework.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class AttributeDataModelSymbolPropertyAnalyzer : DiagnosticAnalyzer
 {
-	public static readonly DiagnosticDescriptor Rule = new(
-		"ADM0010",
-		"Attribute data model property type is not cacheable",
-		"Property '{0}' type '{1}' is not cacheable for attribute data extraction. Use Purview.SourceGeneratorFramework.TypeIdentity or a string/string? type to capture type identity in a cacheable form.",
-		"Property",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor Rule => AttributeDataModelDiagnosticRules.SymbolPropertyNotCacheable;
 
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
 

@@ -13,86 +13,32 @@ namespace Purview.SourceGeneratorFramework.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class AttributeDataModelValidationAnalyzer : DiagnosticAnalyzer
 {
-	public static readonly DiagnosticDescriptor TargetAttributeNotResolved = new(
-		"ADM0001",
-		"Target attribute type cannot be resolved",
-		"Target attribute type for '{0}' cannot be resolved",
-		"Target",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor TargetAttributeNotResolved =>
+		AttributeDataModelDiagnosticRules.TargetAttributeNotResolved;
 
-	public static readonly DiagnosticDescriptor PropertyTypeNotSupported = new(
-		"ADM0002",
-		"Property type is not supported for attribute extraction",
-		"Property '{0}' type '{1}' is not supported for attribute extraction",
-		"Property",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor PropertyTypeNotSupported =>
+		AttributeDataModelDiagnosticRules.PropertyTypeNotSupported;
 
-	public static readonly DiagnosticDescriptor ConstructorMemberNotFound = new(
-		"ADM0003",
-		"Specified constructor index/name does not exist on the target attribute",
-		"Constructor argument '{0}' does not exist on target attribute '{1}'",
-		"Source",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor ConstructorMemberNotFound =>
+		AttributeDataModelDiagnosticRules.ConstructorMemberNotFound;
 
-	public static readonly DiagnosticDescriptor NestedModelNotGenerated = new(
-		"ADM0004",
-		"Nested model type is not annotated with GenerateAttributeDataModel",
-		"Nested model type '{0}' is not annotated with GenerateAttributeDataModel",
-		"NestedModel",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor NestedModelNotGenerated =>
+		AttributeDataModelDiagnosticRules.NestedModelNotGenerated;
 
-	public static readonly DiagnosticDescriptor DefaultValueNotSupported = new(
-		"ADM0005",
-		"Default value cannot be emitted for the property type",
-		"Default value '{0}' cannot be emitted for property type '{1}'",
-		"DefaultValue",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor DefaultValueNotSupported =>
+		AttributeDataModelDiagnosticRules.DefaultValueNotSupported;
 
-	public static readonly DiagnosticDescriptor NonNullableReferenceTypeRequiresDefault = new(
-		"ADM0006",
-		"Non-nullable reference type property requires a default value",
-		"Non-nullable reference type property '{0}' requires an explicit or inferred default value",
-		"DefaultValue",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor NonNullableReferenceTypeRequiresDefault =>
+		AttributeDataModelDiagnosticRules.NonNullableReferenceTypeRequiresDefault;
 
-	public static readonly DiagnosticDescriptor AutoDiscoverRequiresType = new(
-		"ADM0007",
-		"Auto-discovery requires a target attribute type",
-		"Auto-discovery requires a target attribute type; use the Type constructor overload instead of the string overload",
-		"AutoDiscovery",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor AutoDiscoverRequiresType =>
+		AttributeDataModelDiagnosticRules.AutoDiscoverRequiresType;
 
-	public static readonly DiagnosticDescriptor TypeArgumentPropertyTypeInvalid = new(
-		"ADM0008",
-		"Type argument property type must be TypeIdentity",
-		"Type argument property '{0}' type '{1}' must be Purview.SourceGeneratorFramework.TypeIdentity",
-		"TypeArgument",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor TypeArgumentPropertyTypeInvalid =>
+		AttributeDataModelDiagnosticRules.TypeArgumentPropertyTypeInvalid;
 
-	public static readonly DiagnosticDescriptor IsEnumRequiresStringType = new(
-		"ADM0009",
-		"IsEnum property must be a string type",
-		"Property '{0}' is marked with IsEnum but its type '{1}' is not a string; IsEnum requires a string or string? property type",
-		"Property",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor IsEnumRequiresStringType =>
+		AttributeDataModelDiagnosticRules.IsEnumRequiresStringType;
 
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
 		[

@@ -15,113 +15,34 @@ namespace Purview.SourceGeneratorFramework.Analyzers;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 {
-	public static readonly DiagnosticDescriptor SpecNotStaticClass = new(
-		"TLB0001",
-		"GenerateTypeLibrary can only be applied to a static class",
-		"GenerateTypeLibrary can only be applied to a static class",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor SpecNotStaticClass => TypeLibraryDiagnosticRules.SpecNotStaticClass;
 
-	public static readonly DiagnosticDescriptor MemberTypeInvalid = new(
-		"TLB0002",
-		"Type library member type must be TypeIdentity or TypeReference",
-		"Type library member '{0}' type '{1}' must be Purview.SourceGeneratorFramework.TypeIdentity or TypeReference",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor MemberTypeInvalid => TypeLibraryDiagnosticRules.MemberTypeInvalid;
 
-	public static readonly DiagnosticDescriptor MemberTypeNotResolved = new(
-		"TLB0003",
-		"Type library member requires a resolvable type and namespace",
-		"Type library member '{0}' must specify a target type and a namespace, or a fully-qualified type name",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor MemberTypeNotResolved => TypeLibraryDiagnosticRules.MemberTypeNotResolved;
 
-	public static readonly DiagnosticDescriptor DuplicateMember = new(
-		"TLB0004",
-		"Duplicate type library member",
-		"Type library member '{0}' is declared more than once in the generated type library",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor DuplicateMember => TypeLibraryDiagnosticRules.DuplicateMember;
 
-	public static readonly DiagnosticDescriptor InvalidClassName = new(
-		"TLB0005",
-		"Generated type library class name is not a valid identifier",
-		"The generated type library class name '{0}' is not a valid C# identifier",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor InvalidClassName => TypeLibraryDiagnosticRules.InvalidClassName;
 
-	public static readonly DiagnosticDescriptor InvalidNamespace = new(
-		"TLB0006",
-		"Generated type library namespace is not valid",
-		"The generated type library namespace '{0}' is not a valid namespace",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor InvalidNamespace => TypeLibraryDiagnosticRules.InvalidNamespace;
 
-	public static readonly DiagnosticDescriptor MemberAccessibilityInvalid = new(
-		"TLB0008",
-		"Type library member accessibility is invalid",
-		"Type library member '{0}' must be declared private (TypeIdentity marker) or internal (value member)",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor MemberAccessibilityInvalid =>
+		TypeLibraryDiagnosticRules.MemberAccessibilityInvalid;
 
-	public static readonly DiagnosticDescriptor ReferenceMemberMissingInitializer = new(
-		"TLB0009",
-		"Type library reference member requires an initializer",
-		"Type library reference member '{0}' must declare a value",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor ReferenceMemberMissingInitializer =>
+		TypeLibraryDiagnosticRules.ReferenceMemberMissingInitializer;
 
-	public static readonly DiagnosticDescriptor MarkerMissingDefaultInitializer = new(
-		"TLB0010",
-		"Type library marker member should be initialized to default",
-		"Type library marker member '{0}' should declare '= default' so the marker is explicit",
-		"TypeLibrary",
-		DiagnosticSeverity.Info,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor MarkerMissingDefaultInitializer =>
+		TypeLibraryDiagnosticRules.MarkerMissingDefaultInitializer;
 
-	public static readonly DiagnosticDescriptor SpecMustBePartial = new(
-		"TLB0011",
-		"GenerateTypeLibrary spec must be declared partial",
-		"GenerateTypeLibrary spec '{0}' must be declared partial so the generated TypeRefMarkers member can be added",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor SpecMustBePartial => TypeLibraryDiagnosticRules.SpecMustBePartial;
 
-	public static readonly DiagnosticDescriptor SpecClassNameClashesWithGeneratedClass = new(
-		"TLB0012",
-		"Type library spec class name clashes with the generated type library class",
-		"Type library spec class '{0}' has the same name as the generated type library class '{1}'; rename the spec class so the generated partial declarations do not collide",
-		"TypeLibrary",
-		DiagnosticSeverity.Error,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor SpecClassNameClashesWithGeneratedClass =>
+		TypeLibraryDiagnosticRules.SpecClassNameClashesWithGeneratedClass;
 
-	public static readonly DiagnosticDescriptor SpecClassNameCollidesAcrossNamespaces = new(
-		"TLB0013",
-		"Type library spec class name matches the generated type library class",
-		"Type library spec class '{0}' matches the generated type library class '{1}'; rename the spec class so the generated and spec types are clearly distinct",
-		"TypeLibrary",
-		DiagnosticSeverity.Warning,
-		isEnabledByDefault: true
-	);
+	public static DiagnosticDescriptor SpecClassNameCollidesAcrossNamespaces =>
+		TypeLibraryDiagnosticRules.SpecClassNameCollidesAcrossNamespaces;
 
 	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
 		[
@@ -231,7 +152,7 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		if (outputNamespace is not null && !IsValidNamespace(outputNamespace))
 			context.ReportDiagnostic(Diagnostic.Create(InvalidNamespace, typeLocation, outputNamespace));
 
-		var memberNamesByPath = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+		Dictionary<string, HashSet<string>> memberNamesByPath = new(StringComparer.Ordinal);
 
 		foreach (var field in typeSymbol.GetMembers().OfType<IFieldSymbol>())
 		{
@@ -320,7 +241,7 @@ public sealed class TypeLibraryValidationAnalyzer : DiagnosticAnalyzer
 		var pathKey = placementNamespace ?? string.Empty;
 		if (!memberNamesByPath.TryGetValue(pathKey, out var names))
 		{
-			names = new HashSet<string>(StringComparer.Ordinal);
+			names = new(StringComparer.Ordinal);
 			memberNamesByPath[pathKey] = names;
 		}
 

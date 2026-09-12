@@ -146,7 +146,7 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProvider : CodeFixPr
 		if (arguments.Count == 0)
 			return SyntaxFactory.SeparatedList<ArgumentSyntax>();
 
-		var nodesAndTokens = new List<SyntaxNodeOrToken>((arguments.Count * 2) - 1);
+		List<SyntaxNodeOrToken> nodesAndTokens = new((arguments.Count * 2) - 1);
 		for (var index = 0; index < arguments.Count; index++)
 		{
 			if (index > 0)
@@ -173,7 +173,7 @@ public sealed class PreferStructuredCodeWriterIfBlockCodeFixProvider : CodeFixPr
 			case InterpolatedStringExpressionSyntax interpolated:
 #pragma warning disable format
 			{
-				var builder = new System.Text.StringBuilder();
+				System.Text.StringBuilder builder = new();
 				foreach (var content in interpolated.Contents)
 				{
 					if (content is InterpolatedStringTextSyntax textPart)

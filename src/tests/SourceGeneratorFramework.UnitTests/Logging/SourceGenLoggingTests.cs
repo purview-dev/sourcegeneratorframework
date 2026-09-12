@@ -14,7 +14,7 @@ public class SourceGenLoggingTests
 	public async Task Logger_AfterSinkIsRemoved_DropsEntries()
 	{
 		var sessionId = Guid.NewGuid().ToString("N");
-		var entries = new List<string>();
+		List<string> entries = [];
 		var registration = SourceGenLogging.RegisterSink(sessionId, (message, _) => entries.Add(message));
 		var logger = SourceGenLogging.CreateLogger(sessionId);
 		var activeLogger = logger!;

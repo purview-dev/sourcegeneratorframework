@@ -129,7 +129,7 @@ namespace Test
 			+ "\n"
 			+ GenerateAttributeSource;
 
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 		var result = await runner.RunAsync([source1, source2]);
 
 		result.AssertGeneratedSourceCount(2);
@@ -147,7 +147,7 @@ namespace Test
 			+ "\n"
 			+ GenerateAttributeSource;
 
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 		var result = await runner.RunAsync(source);
 
 		var generated = result.AssertSingleGeneratedSource();
@@ -167,7 +167,7 @@ namespace Test
 			+ "\n"
 			+ GenerateAttributeSource;
 
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 		var result = await runner.RunAsync(source);
 
 		result.AssertGeneratedSourceContains("public static class Generated_A");
@@ -185,7 +185,7 @@ namespace Test
 			+ "\n"
 			+ GenerateAttributeSource;
 
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 		var result = await runner.RunAsync(source);
 
 		result.AssertNoCompilationErrors();
@@ -197,7 +197,7 @@ namespace Test
 	)
 	{
 		// Arrange
-		var runner = new SourceGeneratorTestRunner<InvalidSourceGenerator>();
+		SourceGeneratorTestRunner<InvalidSourceGenerator> runner = new();
 		var result = await runner.RunAsync("public sealed class Input { }", cancellationToken: cancellationToken);
 		DriverRunValidationException? exception = null;
 
@@ -226,8 +226,8 @@ namespace Test
 	)
 	{
 		// Arrange
-		var runner = new SourceGeneratorTestRunner<OptionsGenerator>();
-		var options = new SourceGeneratorTestOptions();
+		SourceGeneratorTestRunner<OptionsGenerator> runner = new();
+		SourceGeneratorTestOptions options = new();
 
 		// Act
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
@@ -242,7 +242,7 @@ namespace Test
 		CancellationToken cancellationToken
 	)
 	{
-		var runner = new SourceGeneratorTestRunner<OptionsGenerator>();
+		SourceGeneratorTestRunner<OptionsGenerator> runner = new();
 		var options = new SourceGeneratorTestOptions().WithAnalyzerConfigOptions(("CustomOption", "enabled"));
 
 		var result = await runner.RunAsync("public sealed class Input { }", options, cancellationToken);
@@ -255,7 +255,7 @@ namespace Test
 	[Test]
 	public async Task RunAsync_ReferencesGeneratorAssemblyThatContainsPublicContracts()
 	{
-		var runner = new SourceGeneratorTestRunner<TestGenerator>();
+		SourceGeneratorTestRunner<TestGenerator> runner = new();
 
 		var result = await runner.RunAsync("public sealed class Input { }");
 
@@ -281,8 +281,8 @@ namespace Test
 		{
 			SourceGeneratorTestOptions.Default = originalDefault.WithAnalyzerConfigOptions(("Shared", "default"));
 
-			var first = new CustomSourceGeneratorTestOptions();
-			var second = new CustomSourceGeneratorTestOptions();
+			CustomSourceGeneratorTestOptions first = new();
+			CustomSourceGeneratorTestOptions second = new();
 
 			first = first.WithAnalyzerConfigOptions(("OnlyFirst", "value"));
 
@@ -303,7 +303,7 @@ namespace Test
 	[Test]
 	public async Task Compile_OnBaseOptions_SetsCompileToAssembly()
 	{
-		var options = new SourceGeneratorTestOptions();
+		SourceGeneratorTestOptions options = new();
 
 		var result = options.Compile();
 
@@ -314,7 +314,7 @@ namespace Test
 	[Test]
 	public async Task Compile_OnAnalyzerOptions_PreservesConcreteType()
 	{
-		var options = new AnalyzerTestOptions();
+		AnalyzerTestOptions options = new();
 
 		var result = options.Compile();
 
@@ -325,7 +325,7 @@ namespace Test
 	[Test]
 	public async Task Compile_OnCodeFixOptions_PreservesConcreteType()
 	{
-		var options = new CodeFixTestOptions();
+		CodeFixTestOptions options = new();
 
 		var result = options.Compile();
 
@@ -336,7 +336,7 @@ namespace Test
 	[Test]
 	public async Task Compile_OnCustomDerivedOptions_PreservesConcreteTypeAndProperties()
 	{
-		var options = new CustomSourceGeneratorTestOptions();
+		CustomSourceGeneratorTestOptions options = new();
 
 		var result = options.Compile();
 

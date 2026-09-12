@@ -229,7 +229,7 @@ public class ServiceRegistrationGeneratorTests
 
 		var query = result.Generated();
 		var serviceInfoTree = query.GetSyntaxTree("ServiceInfo.g.cs");
-		var serviceInfoQuery = new CodeQuery([serviceInfoTree], result.CompilationResult.Compilation);
+		CodeQuery serviceInfoQuery = new([serviceInfoTree], result.CompilationResult.Compilation);
 
 		await Assert.That(query.GetClass("ServiceInfo").Node.Identifier.ValueText).IsEqualTo("ServiceInfo");
 		await Assert.That(serviceInfoQuery.GetClass("MyService").Node.Identifier.ValueText).IsEqualTo("MyService");

@@ -24,6 +24,7 @@ public partial class MyClass;
 		var result = await GenerateAsync(source, cancellationToken);
 
 		await Assert.That(result).HasDiagnostic("TEST001");
+		await Assert.That(result.GetGeneratedTree("MyClass.g.cs")).IsNotNull();
 	}
 
 	protected override SourceGeneratorTestOptions OnBeforeRun(
