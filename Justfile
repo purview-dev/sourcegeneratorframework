@@ -2,7 +2,7 @@ set quiet
 
 root_folder := "src"
 solution := root_folder / "SourceGeneratorFramework.slnx"
-build_configuration := "Release"
+build_configuration := "Debug"
 artifacts_folder := "./artifacts"
 default_test_filter := "/*/*/*/*/"
 
